@@ -106,7 +106,7 @@
 (async function(){
   await requireAuth();
   const me = await currentProfile();
-  if (me && me.teams) document.getElementById('team-name').textContent = me.teams.name;
+  const isAdmin = me && me.role === 'admin';
   const md = window.markdownit({ html: false, linkify: true, breaks: true });
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   function fileIcon(name){
@@ -115,6 +115,24 @@
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 5-5 4 4 2-2 3 3"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
   }
+  async function fileLink(f){
+    const url = await signedUrl(f.file_path);
+    return '<a class="detail-file" href="' + url + '" target="_blank" rel="noopener">' +
+      '<span class="fico">' + fileIcon(f.file_name) + '</span>' +
+      '<span class="fmeta"><span class="fname">' + esc(f.file_name) + '</span></span>' +
+      '<span class="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></span></a>';
+  }
+
+  // Admin sees all teams; a member sees only their own. Adjust labels + nav accordingly.
+  document.getElementById('team-name').textContent = isAdmin ? 'All teams · admin' : (me.teams ? me.teams.name : 'Your team');
+  if (isAdmin) {
+    document.querySelectorAll('.brand, a.btn.btn-ghost[href="team.html"]').forEach(a => { a.href = 'admin.html'; });
+    const titles = document.querySelectorAll('#history-detail .card-title');
+    [['Team notes', titles[0]], ['Team files', titles[1]]].forEach(([label, el]) => {
+      if (!el) return; const svg = el.querySelector('svg'); el.textContent = '';
+      if (svg) el.appendChild(svg); el.appendChild(document.createTextNode(' ' + label));
+    });
+  }
 
   const listEl    = document.getElementById('history-list');
   const notesEl   = document.getElementById('history-notes');
@@ -122,21 +140,22 @@
   const minutesEl = document.getElementById('history-minutes');
   const labelEl   = document.getElementById('detail-meeting-label');
 
-  // Past meetings (not the active one), newest first
   const { data: meetings } = await supa.from('meetings').select('*')
     .eq('is_active', false).order('created_at', { ascending: false });
-  // This team's own notes + files across all meetings (RLS-scoped to the team)
-  const { data: myNotes } = await supa.from('notes').select('*').eq('team_id', me.team_id);
-  const { data: mySubs } = await supa.from('submissions').select('*').eq('team_id', me.team_id);
-  const noteFor = (mid) => (myNotes || []).find(n => n.meeting_id === mid) || {};
-  const subsFor = (mid) => (mySubs || []).filter(s => s.meeting_id === mid);
+  const { data: teams } = await supa.from('teams').select('*').order('name');
+  // Admin: all teams' notes/files (RLS admin-read). Member: own team only.
+  let notesQ = supa.from('notes').select('*');
+  let subsQ = supa.from('submissions').select('*');
+  if (!isAdmin) { notesQ = notesQ.eq('team_id', me.team_id); subsQ = subsQ.eq('team_id', me.team_id); }
+  const { data: allNotes } = await notesQ;
+  const { data: allSubs } = await subsQ;
+  const subsOfMeeting = (mid) => (allSubs || []).filter(s => s.meeting_id === mid);
+  const teamName = (id) => ((teams || []).find(t => t.id === id) || {}).name || 'Team';
 
   if (!meetings || !meetings.length) {
     listEl.innerHTML = '<li class="muted-note" style="padding:12px;">No past meetings yet.</li>';
     labelEl.textContent = '—';
-    notesEl.innerHTML = '<div class="muted-note">Nothing here yet.</div>';
-    filesEl.innerHTML = '<div class="muted-note">Nothing here yet.</div>';
-    minutesEl.innerHTML = '<div class="muted-note">Nothing here yet.</div>';
+    notesEl.innerHTML = filesEl.innerHTML = minutesEl.innerHTML = '<div class="muted-note">Nothing here yet.</div>';
     return;
   }
 
@@ -144,25 +163,28 @@
     const m = meetings[idx];
     Array.prototype.forEach.call(listEl.children, (li, k) => li.classList.toggle('active', k === idx));
     labelEl.textContent = m.title + (m.meeting_date ? ' · ' + m.meeting_date : '');
+    const mNotes = (allNotes || []).filter(n => n.meeting_id === m.id);
+    const mSubs = subsOfMeeting(m.id);
 
-    const n = noteFor(m.id);
-    notesEl.innerHTML =
-      '<h4>Meeting notes</h4>' + md.render(n.content && n.content.trim() ? n.content : '_No notes were submitted._') +
-      '<h4>Pre-meeting note</h4>' + md.render(n.pre_note && n.pre_note.trim() ? n.pre_note : '_None._');
-
-    const files = subsFor(m.id);
-    if (files.length) {
-      const html = [];
-      for (const f of files) {
-        const url = await signedUrl(f.file_path);
-        html.push('<a class="detail-file" href="' + url + '" target="_blank" rel="noopener">' +
-          '<span class="fico">' + fileIcon(f.file_name) + '</span>' +
-          '<span class="fmeta"><span class="fname">' + esc(f.file_name) + '</span></span>' +
-          '<span class="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></span></a>');
+    if (isAdmin) {
+      // group notes + files by team
+      let nHtml = '', fHtml = '';
+      for (const t of (teams || [])) {
+        const n = mNotes.find(x => x.team_id === t.id) || {};
+        nHtml += '<h4>' + esc(t.name) + '</h4>' +
+          md.render(n.content && n.content.trim() ? n.content : '_No notes_');
+        const tf = mSubs.filter(s => s.team_id === t.id);
+        if (tf.length) { fHtml += '<h4>' + esc(t.name) + '</h4>'; for (const f of tf) fHtml += await fileLink(f); }
       }
-      filesEl.innerHTML = html.join('');
+      notesEl.innerHTML = nHtml;
+      filesEl.innerHTML = fHtml || '<div class="muted-note">No files were submitted.</div>';
     } else {
-      filesEl.innerHTML = '<div class="muted-note">No files were submitted.</div>';
+      const n = mNotes[0] || {};
+      notesEl.innerHTML =
+        '<h4>Meeting notes</h4>' + md.render(n.content && n.content.trim() ? n.content : '_No notes were submitted._') +
+        '<h4>Pre-meeting note</h4>' + md.render(n.pre_note && n.pre_note.trim() ? n.pre_note : '_None._');
+      if (mSubs.length) { let h = ''; for (const f of mSubs) h += await fileLink(f); filesEl.innerHTML = h; }
+      else filesEl.innerHTML = '<div class="muted-note">No files were submitted.</div>';
     }
 
     minutesEl.innerHTML = m.minutes_final ? md.render(m.minutes_final)
@@ -174,7 +196,7 @@
     li.className = 'hitem';
     li.innerHTML = '<div class="htitle">' + esc(m.title) + '</div>' +
       '<div class="hdate">' + esc(m.meeting_date || '') + '</div>' +
-      '<div class="hmeta"><span>' + subsFor(m.id).length + ' files</span><span>' +
+      '<div class="hmeta"><span>' + subsOfMeeting(m.id).length + ' files</span><span>' +
       (m.minutes_final ? 'minutes' : 'no minutes') + '</span></div>';
     li.addEventListener('click', () => select(idx));
     listEl.appendChild(li);
