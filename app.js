@@ -171,6 +171,35 @@ function buildCapture() {
   }
 }
 
+// ponytail: demo helper — fills each loaded team's box with plausible random notes
+// so you can test the minutes without typing. Generic over whatever teams are loaded.
+const SAMPLE = {
+  done: ['shipped the new build', 'closed 4 support tickets', 'finished the Q3 report',
+    'onboarded a new client', 'fixed the login bug', 'launched the email campaign',
+    'completed the security review', 'migrated 60% of accounts'],
+  next: ['start the data migration', 'review the new designs', 'follow up with the client',
+    'prep the customer demo', 'write the release notes', 'plan the next sprint'],
+  block: ['waiting on API keys', 'need design sign-off', 'blocked by the vendor',
+    'pending budget approval', 'waiting on legal review'],
+  task: ['send the proposal', 'update the roadmap', 'book the review', 'ship the fix', 'draft the email'],
+  owner: ['sara', 'james', 'mei', 'omar', 'lena', 'raj'],
+};
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+function sampleNote() {
+  return [
+    `- Done: ${pick(SAMPLE.done)}`,
+    `- Next: ${pick(SAMPLE.next)}`,
+    `- **Blocker:** ${pick(SAMPLE.block)}`,
+    `- Action: ${pick(SAMPLE.task)} — @${pick(SAMPLE.owner)}`,
+  ].join('\n');
+}
+function fillSampleNotes() {
+  if (!STATE.groups.length) return;
+  for (const g of STATE.groups) STATE.notes[g.team] = sampleNote();
+  buildCapture();
+}
+document.getElementById('fill-demo').addEventListener('click', fillSampleNotes);
+
 // ---- after screen: minutes + PDF ----
 function generateMinutes() {
   const markdown = buildMinutesMarkdown({
