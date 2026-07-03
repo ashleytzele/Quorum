@@ -1,7 +1,11 @@
 'use strict';
 
 const md = window.markdownit({ html: false, linkify: true, breaks: true });
-const STATE = { groups: [], deck: null, notes: {} };
+const STATE = { groups: [], deck: null, notes: {}, rendering: false };
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
 
 // ---- nav ----
 function showScreen(name) {
@@ -21,16 +25,16 @@ async function fileToSection(entry) {
     const text = await entry.file.text();
     return splitSlides(text)
       .map((chunk) => `<section>${md.render(chunk)}</section>`)
-      .join('') || `<section><em>${entry.name} (empty)</em></section>`;
+      .join('') || `<section><em>${esc(entry.name)} (empty)</em></section>`;
   }
   const url = URL.createObjectURL(entry.file);
   if (entry.kind === 'image') {
-    return `<section><h3>${entry.name}</h3><img src="${url}" style="max-height:70vh" /></section>`;
+    return `<section><h3>${esc(entry.name)}</h3><img src="${url}" style="max-height:70vh" /></section>`;
   }
   if (entry.kind === 'pdf') {
-    return `<section><h3>${entry.name}</h3><embed src="${url}" type="application/pdf" style="width:90%;height:70vh" /></section>`;
+    return `<section><h3>${esc(entry.name)}</h3><embed src="${url}" type="application/pdf" style="width:90%;height:70vh" /></section>`;
   }
-  return `<section><h3>${entry.name}</h3><a href="${url}" target="_blank" rel="noopener">Open ${entry.name}</a></section>`;
+  return `<section><h3>${esc(entry.name)}</h3><a href="${url}" target="_blank" rel="noopener">Open ${esc(entry.name)}</a></section>`;
 }
 
 // ---- build the whole deck ----
@@ -38,7 +42,7 @@ async function renderSlides() {
   const slides = document.getElementById('slides');
   const parts = [];
   for (const g of STATE.groups) {
-    const inner = [`<section><h2>${g.team}</h2></section>`];
+    const inner = [`<section><h2>${esc(g.team)}</h2></section>`];
     for (const entry of g.files) inner.push(await fileToSection(entry));
     // one horizontal group per team, files as vertical slides
     parts.push(`<section>${inner.join('')}</section>`);
@@ -56,11 +60,18 @@ async function renderSlides() {
 
 // ---- folder input ----
 document.getElementById('folderInput').addEventListener('change', async (e) => {
-  STATE.groups = groupFilesByTeam([...e.target.files]);
-  document.getElementById('before-hint').style.display = STATE.groups.length ? 'none' : '';
-  document.getElementById('during-hint').style.display = STATE.groups.length ? 'none' : '';
-  await renderSlides();
-  buildCapture();   // defined in Task 7
+  if (STATE.rendering) return; // ponytail: single in-flight guard, no queue needed for a folder picker
+  STATE.rendering = true;
+  try {
+    STATE.groups = groupFilesByTeam([...e.target.files]);
+    document.getElementById('before-hint').style.display = STATE.groups.length ? 'none' : '';
+    document.getElementById('during-hint').style.display = STATE.groups.length ? 'none' : '';
+    showScreen('before'); // init Reveal while the deck container is visible
+    await renderSlides();
+    buildCapture();   // defined in Task 7
+  } finally {
+    STATE.rendering = false;
+  }
 });
 
 showScreen('before');
@@ -74,8 +85,8 @@ function buildCapture() {
     STATE.notes[g.team] = '';
     const card = document.createElement('div');
     card.className = 'team-card';
-    card.innerHTML = `<h3>${g.team}</h3>
-      <textarea placeholder="Notes for ${g.team}…"></textarea>
+    card.innerHTML = `<h3>${esc(g.team)}</h3>
+      <textarea placeholder="Notes for ${esc(g.team)}…"></textarea>
       <div class="preview"></div>`;
     const ta = card.querySelector('textarea');
     const pv = card.querySelector('.preview');
