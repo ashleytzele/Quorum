@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Signing you in… · MeeTeam</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="auth">
+    <div class="auth-card">
+      <p class="auth-msg" id="route-msg" role="status">Signing you in…</p>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="supa.js"></script>
+  <script>
+    // After the magic-link redirect, send admins to admin.html and members to team.html.
+    (async () => {
+      await requireAuth('index.html');
+      const p = await currentProfile();
+      location.href = (p && p.role === 'admin') ? 'admin.html' : 'team.html';
+    })();
+  </script>
+</body>
+</html>

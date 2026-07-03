@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Team · MeeTeam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page">
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="team.html">
+        <svg class="mark" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="9" fill="#3b4dd8"/>
+          <circle cx="12.6" cy="16" r="5.4" fill="#fff"/>
+          <circle cx="19.4" cy="16" r="5.4" fill="#fff" fill-opacity=".55"/>
+        </svg>
+        <span>MeeTeam</span>
+      </a>
+      <div class="context">
+        <span class="team" id="team-name">Product Team</span>
+        <span class="meeting" id="meeting-title">Weekly Sync · Jul 3, 2026</span>
+      </div>
+      <span class="spacer"></span>
+      <a class="toplink" id="history-link" href="history.html">History</a>
+      <a class="toplink" href="admin.html">Admin view</a>
+      <a class="toplink" href="#" id="signout-link">Sign out</a>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="container">
+      <div class="grid-head">
+        <div>
+          <div class="page-title">Meeting workspace</div>
+          <div class="page-sub">Prepare what you're presenting, then capture notes for the minutes.</div>
+        </div>
+      </div>
+
+      <!-- ============ SECTION 1 · Pre-meeting submission ============ -->
+      <section class="card" style="margin-bottom:22px;">
+        <div class="card-head">
+          <div class="card-titles">
+            <span class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+              Pre-meeting submission
+            </span>
+            <span class="card-sub">What you're presenting to the team</span>
+          </div>
+          <span class="status ok" id="pre-autosave"><span class="dot"></span>Saved</span>
+        </div>
+
+        <div class="card-body">
+          <div class="segmented" style="margin-bottom:18px;" role="tablist">
+            <button type="button" class="active" data-panel="type">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+              Type a note
+            </button>
+            <button type="button" data-panel="upload">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              Upload files
+            </button>
+          </div>
+
+          <!-- Type a note -->
+          <div class="subpanel active" data-panel="type">
+            <div class="notes-split bordered">
+              <div class="pane">
+                <div class="pane-label">Markdown</div>
+                <textarea id="pre-note" class="md-editor compact" spellcheck="false" placeholder="# What I'm presenting&#10;&#10;Outline the talking points you'll share…"></textarea>
+              </div>
+              <div class="pane">
+                <div class="pane-label">Preview</div>
+                <div class="md" id="pre-note-preview"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload files -->
+          <div class="subpanel" data-panel="upload">
+            <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Upload files">
+              <div class="dzicon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              </div>
+              <div class="dztitle">Drop documents or pictures here</div>
+              <div class="dzsub">or <span class="browse">browse your device</span> · PDF, DOCX, PNG, JPG</div>
+            </div>
+            <input type="file" id="file-input" multiple hidden>
+
+            <div class="subhead" style="margin-top:20px;">Uploaded files <span id="file-count" style="color:var(--text-3);">(0)</span></div>
+            <ul class="filelist" id="file-list"></ul>
+          </div>
+        </div>
+
+        <div class="card-foot">
+          <span class="foot-label">Submission status</span>
+          <div style="display:flex;align-items:center;gap:13px;">
+            <span class="pill pill-muted" id="submit-status">Draft</span>
+            <label class="switch" title="Mark as submitted">
+              <input type="checkbox" id="submit-toggle">
+              <span class="track"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SECTION 2 · Meeting notes ============ -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-titles">
+            <span class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 11h8M8 15h5"/></svg>
+              Meeting notes
+            </span>
+            <span class="card-sub">Included in the meeting minutes — separate from your submission above</span>
+          </div>
+          <span class="status ok" id="save-status"><span class="dot"></span>Saved</span>
+        </div>
+        <div class="notes-split">
+          <div class="pane">
+            <div class="pane-label">Markdown</div>
+            <textarea id="notes" class="md-editor" spellcheck="false" placeholder="# Meeting notes&#10;&#10;Write in Markdown — it renders live on the right."></textarea>
+          </div>
+          <div class="pane">
+            <div class="pane-label">Preview</div>
+            <div class="md" id="notes-preview"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="supa.js"></script>
+<script src="lib.js"></script>
+<script>
+(async function(){
+  await requireAuth();
+  const me = await currentProfile();
+  const meeting = await activeMeeting();
+  if (me && me.teams) document.getElementById('team-name').textContent = me.teams.name;
+  document.getElementById('signout-link').addEventListener('click', function(e){ e.preventDefault(); signOut(); });
+
+  const titleEl = document.getElementById('meeting-title');
+  if (!meeting) { titleEl.textContent = 'No active meeting'; return; }
+  titleEl.textContent = meeting.title + (meeting.meeting_date ? ' · ' + meeting.meeting_date : '');
+
+  /* ---------- Markdown renderer (from the design) ---------- */
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function inline(s){
+    s = s.replace(/`([^`]+)`/g, function(_,c){ return '<code>' + c + '</code>'; });
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^\*])\*([^*\s][^*]*?)\*/g, '$1<em>$2</em>');
+    s = s.replace(/\b_([^_]+)_\b/g, '<em>$1</em>');
+    s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  }
+  function md(src){
+    var lines = String(src).replace(/\r\n/g,'\n').split('\n');
+    var out = [], para = [], i = 0;
+    function flushP(){ if(para.length){ out.push('<p>' + para.map(function(l){ return inline(esc(l)); }).join('<br>') + '</p>'); para = []; } }
+    while(i < lines.length){
+      var line = lines[i];
+      if(/^```/.test(line)){ flushP(); var code = []; i++; while(i < lines.length && !/^```/.test(lines[i])){ code.push(lines[i]); i++; } i++; out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>'); continue; }
+      if(/^\s*$/.test(line)){ flushP(); i++; continue; }
+      var h = line.match(/^(#{1,3})\s+(.*)$/);
+      if(h){ flushP(); var lv = h[1].length; out.push('<h'+lv+'>'+inline(esc(h[2]))+'</h'+lv+'>'); i++; continue; }
+      if(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)){ flushP(); out.push('<hr>'); i++; continue; }
+      if(/^\s*>/.test(line)){ flushP(); var q = []; while(i < lines.length && /^\s*>/.test(lines[i])){ q.push(lines[i].replace(/^\s*>\s?/,'')); i++; } out.push('<blockquote>' + q.map(function(l){ return inline(esc(l)); }).join('<br>') + '</blockquote>'); continue; }
+      if(/^\s*[-*+]\s+/.test(line)){ flushP(); var items = []; while(i < lines.length && /^\s*[-*+]\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*[-*+]\s+/,'')); i++; } out.push('<ul>' + items.map(function(t){ return '<li>' + inline(esc(t)) + '</li>'; }).join('') + '</ul>'); continue; }
+      if(/^\s*\d+\.\s+/.test(line)){ flushP(); var oi = []; while(i < lines.length && /^\s*\d+\.\s+/.test(lines[i])){ oi.push(lines[i].replace(/^\s*\d+\.\s+/,'')); i++; } out.push('<ol>' + oi.map(function(t){ return '<li>' + inline(esc(t)) + '</li>'; }).join('') + '</ol>'); continue; }
+      para.push(line); i++;
+    }
+    flushP();
+    return out.join('\n');
+  }
+
+  /* ---------- Save-status helper (from the design) ---------- */
+  function saver(el){
+    return {
+      saving: function(){ el.className = 'status saving'; el.innerHTML = '<span class="dot"></span>Saving…'; },
+      saved:  function(){ el.className = 'status ok'; el.innerHTML = '<span class="dot"></span>Saved'; }
+    };
+  }
+
+  /* ---------- Load this team's note row (pre_note, content, submitted) ---------- */
+  const { data: noteRow } = await supa.from('notes').select('pre_note, content, submitted')
+    .eq('meeting_id', meeting.id).eq('team_id', me.team_id).maybeSingle();
+  const initial = noteRow || { pre_note: '', content: '', submitted: false };
+
+  async function saveNote(fields){
+    await supa.from('notes').upsert(
+      Object.assign({ meeting_id: meeting.id, team_id: me.team_id, updated_at: new Date().toISOString() }, fields),
+      { onConflict: 'meeting_id,team_id' });
+  }
+
+  /* ---------- Editors (autosave to Supabase) ---------- */
+  function bindEditor(ta, prev, statusEl, value, saveFn){
+    var st = saver(statusEl), timer;
+    function render(){ var v = ta.value.trim(); prev.innerHTML = v ? md(ta.value) : '<p class="md-empty">Nothing to preview yet.</p>'; }
+    ta.addEventListener('input', function(){
+      render(); st.saving();
+      clearTimeout(timer);
+      timer = setTimeout(async function(){ await saveFn(ta.value); st.saved(); }, 700);
+    });
+    // catch OS dictation (Spokenly etc.) that may not fire 'input'
+    ta.addEventListener('blur', function(){ render(); });
+    ta.value = value || '';
+    render(); st.saved();
+    return { render: render, status: st };
+  }
+
+  bindEditor(document.getElementById('pre-note'), document.getElementById('pre-note-preview'),
+    document.getElementById('pre-autosave'), initial.pre_note, function(v){ return saveNote({ pre_note: v }); });
+  bindEditor(document.getElementById('notes'), document.getElementById('notes-preview'),
+    document.getElementById('save-status'), initial.content, function(v){ return saveNote({ content: v }); });
+
+  /* ---------- Segmented control (from the design) ---------- */
+  var seg = document.querySelectorAll('.segmented button');
+  var panels = document.querySelectorAll('.subpanel');
+  Array.prototype.forEach.call(seg, function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(seg, function(x){ x.classList.toggle('active', x === b); });
+      var p = b.getAttribute('data-panel');
+      Array.prototype.forEach.call(panels, function(x){ x.classList.toggle('active', x.getAttribute('data-panel') === p); });
+    });
+  });
+
+  /* ---------- Files (wired to Supabase Storage) ---------- */
+  var input = document.getElementById('file-input');
+  var list  = document.getElementById('file-list');
+  var zone  = document.getElementById('dropzone');
+  var countEl = document.getElementById('file-count');
+  var ICON_DOC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
+  var ICON_IMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 5-5 4 4 2-2 3 3"/></svg>';
+  function isImage(name){ return /\.(png|jpe?g|gif|webp|svg|heic|bmp)$/i.test(name); }
+  function updateCount(){
+    var n = list.querySelectorAll('.file-item').length;
+    countEl.textContent = '(' + n + ')';
+    var empty = list.querySelector('.empty');
+    if(n === 0 && !empty){ var li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No files yet — add documents or pictures above.'; list.appendChild(li); }
+    else if(n > 0 && empty){ empty.remove(); }
+  }
+  function addFileRow(f){
+    var li = document.createElement('li'); li.className = 'file-item';
+    li.innerHTML = '<span class="fico">' + (isImage(f.file_name) ? ICON_IMG : ICON_DOC) + '</span><span class="fmeta"><span class="fname"></span><span class="fsize"></span></span><button class="file-remove" type="button">Remove</button>';
+    li.querySelector('.fname').textContent = f.file_name;
+    li.querySelector('.file-remove').addEventListener('click', async function(){
+      await supa.storage.from('submissions').remove([f.file_path]);
+      await supa.from('submissions').delete().eq('id', f.id);
+      li.remove(); updateCount();
+    });
+    list.appendChild(li);
+  }
+  async function uploadFiles(files){
+    var rejected = 0;
+    for (var k = 0; k < files.length; k++){
+      var file = files[k];
+      if(!isAccepted(file.name)){ rejected++; continue; }
+      var path = meeting.id + '/' + me.team_id + '/' + Date.now() + '-' + file.name;
+      var up = await supa.storage.from('submissions').upload(path, file);
+      if(up.error){ alert(up.error.message); continue; }
+      var ins = await supa.from('submissions').insert({
+        meeting_id: meeting.id, team_id: me.team_id, file_path: path, file_name: file.name, mime: file.type
+      }).select().single();
+      if(ins.data) addFileRow(ins.data);
+    }
+    updateCount();
+    if(rejected) alert(rejected + ' file(s) skipped — only documents and pictures are allowed.');
+  }
+  input.addEventListener('change', function(){ uploadFiles(input.files); input.value = ''; });
+  zone.addEventListener('click', function(){ input.click(); });
+  zone.addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); input.click(); } });
+  ['dragenter','dragover'].forEach(function(ev){ zone.addEventListener(ev, function(e){ e.preventDefault(); zone.classList.add('drag'); }); });
+  zone.addEventListener('dragleave', function(e){ if(zone.contains(e.relatedTarget)) return; zone.classList.remove('drag'); });
+  zone.addEventListener('drop', function(e){ e.preventDefault(); zone.classList.remove('drag'); if(e.dataTransfer && e.dataTransfer.files) uploadFiles(e.dataTransfer.files); });
+
+  // load existing files
+  const { data: subs } = await supa.from('submissions').select('*')
+    .eq('meeting_id', meeting.id).eq('team_id', me.team_id).order('created_at');
+  (subs || []).forEach(addFileRow);
+  updateCount();
+
+  /* ---------- Submit toggle (wired to notes.submitted) ---------- */
+  var toggle = document.getElementById('submit-toggle');
+  var subStatus = document.getElementById('submit-status');
+  function reflect(){
+    if(toggle.checked){ subStatus.textContent = 'Submitted'; subStatus.className = 'pill pill-ok'; }
+    else { subStatus.textContent = 'Draft'; subStatus.className = 'pill pill-muted'; }
+  }
+  toggle.checked = !!initial.submitted;
+  toggle.addEventListener('change', async function(){ reflect(); await saveNote({ submitted: toggle.checked }); });
+  reflect();
+})();
+</script>
+</body>
+</html>

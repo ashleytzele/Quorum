@@ -3,7 +3,7 @@
 # reliable here, unlike opening index.html directly as a file://).
 cd "$(dirname "$0")" || exit 1
 PORT=8000
-python3 -m http.server "$PORT" >/dev/null 2>&1 &
+python3 -m http.server "$PORT" --directory web >/dev/null 2>&1 &
 SERVER_PID=$!
 sleep 1
 open "http://localhost:$PORT/index.html"

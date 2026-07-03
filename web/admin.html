@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · MeeTeam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="admin.html">
+        <svg class="mark" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="9" fill="#3b4dd8"/>
+          <circle cx="12.6" cy="16" r="5.4" fill="#fff"/>
+          <circle cx="19.4" cy="16" r="5.4" fill="#fff" fill-opacity=".55"/>
+        </svg>
+        <span>MeeTeam</span>
+      </a>
+      <div class="context">
+        <span class="team" id="org-name">Admin console</span>
+        <span class="meeting">Admin console</span>
+      </div>
+      <span class="spacer"></span>
+      <a class="toplink" href="team.html">Member view</a>
+      <a class="toplink" href="#" id="admin-signout">Sign out</a>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="container">
+      <div class="grid-head">
+        <div>
+          <div class="page-title">Meeting administration</div>
+          <div class="page-sub">Configure the meeting, review each team's submission, then present or export.</div>
+        </div>
+      </div>
+
+      <!-- Meeting details -->
+      <section class="card" style="margin-bottom:22px;">
+        <div class="card-head">
+          <span class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>
+            Meeting details
+          </span>
+          <span class="status" id="meeting-saved"><span class="dot"></span>All changes saved</span>
+        </div>
+        <div class="card-body">
+          <form id="meeting-form" class="form-row">
+            <div class="field">
+              <label class="label" for="m-title">Meeting title</label>
+              <input class="input" type="text" id="m-title" value="">
+            </div>
+            <div class="field">
+              <label class="label" for="m-date">Date</label>
+              <input class="input" type="date" id="m-date" value="">
+            </div>
+            <div class="field">
+              <label class="label" for="m-org">Organization</label>
+              <input class="input" type="text" id="m-org" value="">
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Teams table -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19a4 4 0 0 0-8 0"/><circle cx="12" cy="9" r="3"/><path d="M5 19a3.5 3.5 0 0 1 4-3.2M19 19a3.5 3.5 0 0 0-4-3.2"/></svg>
+            Teams
+          </span>
+          <span class="pill-muted pill" id="team-count">0 teams</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Team</th>
+                <th class="num">Files</th>
+                <th>Notes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="team-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="admin-actions">
+        <button class="btn btn-ghost btn-lg" id="minutes-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+          Export minutes
+        </button>
+        <button class="btn btn-ghost btn-lg" id="preview-slideshow-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l11-6.5z"/></svg>
+          Preview slideshow
+        </button>
+        <button class="btn btn-primary btn-lg" id="present-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+          Present
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Team detail drawer -->
+<div class="drawer-overlay" id="drawer-overlay"></div>
+<aside class="drawer" id="team-detail" aria-hidden="true" aria-label="Team detail">
+  <div class="drawer-head">
+    <span class="team-badge" id="detail-badge" style="background:#3b4dd8;">PR</span>
+    <div class="drawer-titles">
+      <div class="drawer-title" id="detail-name">Team</div>
+      <div class="drawer-title-sub" id="detail-sub"></div>
+    </div>
+    <button class="icon-btn" id="drawer-close" type="button" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body">
+    <div>
+      <div class="subhead">Submitted files</div>
+      <div class="stack" id="detail-files"></div>
+    </div>
+    <div>
+      <div class="subhead">Notes preview</div>
+      <div class="md" id="detail-notes"></div>
+    </div>
+  </div>
+</aside>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+<script src="config.js"></script>
+<script src="supa.js"></script>
+<script>
+(async function(){
+  await requireAuth();
+  const me = await currentProfile();
+  if (!me || me.role !== 'admin') { location.href = 'team.html'; return; }
+  document.getElementById('admin-signout').addEventListener('click', function(e){ e.preventDefault(); signOut(); });
+  const md = window.markdownit({ html: false, linkify: true, breaks: true });
+  function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 6"/></svg>';
+  const PALETTE = ['#3b4dd8','#0f8a5f','#b5850b','#8a4fd0','#c2410c','#0891b2'];
+  function initials(name){ return name.trim().split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase(); }
+  function fileIcon(name){
+    var img = /\.(png|jpe?g|gif|webp|svg|heic|bmp|fig)$/i.test(name);
+    return img
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 5-5 4 4 2-2 3 3"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
+  }
+
+  /* ---------- Meeting details (edit active meeting; create if none) ---------- */
+  const meeting = await activeMeeting();
+  const fTitle = document.getElementById('m-title');
+  const fDate  = document.getElementById('m-date');
+  const fOrg   = document.getElementById('m-org');
+  const savedEl = document.getElementById('meeting-saved');
+  let mId = meeting ? meeting.id : null;
+  if (meeting){ fTitle.value = meeting.title || ''; fDate.value = meeting.meeting_date || ''; fOrg.value = meeting.org || ''; document.getElementById('org-name').textContent = meeting.org || 'Admin console'; }
+  function flashSaving(){ savedEl.className = 'status saving'; savedEl.innerHTML = '<span class="dot"></span>Saving…'; }
+  function flashSaved(){ savedEl.className = 'status ok'; savedEl.innerHTML = '<span class="dot"></span>All changes saved'; }
+  async function persistMeeting(){
+    flashSaving();
+    const payload = { title: fTitle.value || 'Untitled', meeting_date: fDate.value || null, org: fOrg.value };
+    if (mId){ await supa.from('meetings').update(payload).eq('id', mId); }
+    else { const { data } = await supa.from('meetings').insert(Object.assign({ is_active: true }, payload)).select().single(); mId = data.id; }
+    flashSaved();
+  }
+  let mtimer;
+  [fTitle, fDate, fOrg].forEach(function(f){ f.addEventListener('input', function(){ flashSaving(); clearTimeout(mtimer); mtimer = setTimeout(persistMeeting, 600); }); });
+  document.getElementById('meeting-form').addEventListener('submit', function(e){ e.preventDefault(); persistMeeting(); });
+
+  /* ---------- Load teams + submissions + notes ---------- */
+  const { data: teams } = await supa.from('teams').select('*').order('name');
+  let subs = [], notes = [];
+  if (mId){
+    subs = (await supa.from('submissions').select('*').eq('meeting_id', mId)).data || [];
+    notes = (await supa.from('notes').select('*').eq('meeting_id', mId)).data || [];
+  }
+  const filesOf = id => subs.filter(s => s.team_id === id);
+  const noteOf  = id => notes.find(n => n.team_id === id) || {};
+  document.getElementById('team-count').textContent = (teams || []).length + ' teams';
+
+  const tbody = document.getElementById('team-rows');
+  (teams || []).forEach(function(t, idx){
+    const n = noteOf(t.id);
+    const color = PALETTE[idx % PALETTE.length];
+    const hasNotes = n.content && n.content.trim();
+    const notesCell = n.submitted
+      ? '<span class="notes-yes">' + CHECK + 'Submitted</span>'
+      : (hasNotes ? '<span class="notes-yes">' + CHECK + 'Notes</span>' : '<span class="notes-no">— No notes</span>');
+    const tr = document.createElement('tr');
+    tr.className = 'clickable';
+    tr.dataset.teamId = t.id;
+    tr.innerHTML =
+      '<td><span class="team-cell"><span class="team-badge" style="background:' + color + ';">' + initials(t.name) + '</span>' + esc(t.name) + '</span></td>' +
+      '<td class="num"><span class="count">' + filesOf(t.id).length + '</span></td>' +
+      '<td>' + notesCell + '</td>' +
+      '<td style="text-align:right;"><button class="view-btn" type="button">View</button></td>';
+    tr.addEventListener('click', function(){ openTeam(t, color); });
+    tbody.appendChild(tr);
+  });
+
+  /* ---------- Drawer ---------- */
+  const overlay = document.getElementById('drawer-overlay');
+  const drawer  = document.getElementById('team-detail');
+  const dBadge  = document.getElementById('detail-badge');
+  const dName   = document.getElementById('detail-name');
+  const dSub    = document.getElementById('detail-sub');
+  const dFiles  = document.getElementById('detail-files');
+  const dNotes  = document.getElementById('detail-notes');
+
+  async function openTeam(t, color){
+    const n = noteOf(t.id);
+    const files = filesOf(t.id);
+    dBadge.textContent = initials(t.name); dBadge.style.background = color;
+    dName.textContent = t.name;
+    dSub.textContent = files.length + (files.length === 1 ? ' file · ' : ' files · ') + (n.submitted ? 'Submitted' : 'Not submitted');
+    dFiles.innerHTML = files.length ? '<div class="muted-note">Loading…</div>' : '<div class="muted-note">No files submitted.</div>';
+    dNotes.innerHTML =
+      '<h4>Meeting notes</h4>' + md.render(n.content && n.content.trim() ? n.content : '_none_') +
+      '<h4>Pre-meeting note</h4>' + md.render(n.pre_note && n.pre_note.trim() ? n.pre_note : '_none_');
+    overlay.classList.add('open'); drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false');
+    if (files.length){
+      const html = [];
+      for (const f of files){
+        const url = await signedUrl(f.file_path);
+        html.push('<a class="detail-file" href="' + url + '" target="_blank" rel="noopener">' +
+          '<span class="fico">' + fileIcon(f.file_name) + '</span>' +
+          '<span class="fmeta"><span class="fname">' + esc(f.file_name) + '</span></span>' +
+          '<span class="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></span></a>');
+      }
+      dFiles.innerHTML = html.join('');
+    }
+  }
+  function closeDrawer(){ overlay.classList.remove('open'); drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); }
+  overlay.addEventListener('click', closeDrawer);
+  document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeDrawer(); });
+
+  /* ---------- Actions ---------- */
+  document.getElementById('present-btn').addEventListener('click', function(){ location.href = 'present.html'; });
+  document.getElementById('preview-slideshow-btn').addEventListener('click', function(){ location.href = 'present.html'; });
+  document.getElementById('minutes-btn').addEventListener('click', function(){ location.href = 'minutes.html'; });
+})();
+</script>
+</body>
+</html>

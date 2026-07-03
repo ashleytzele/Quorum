@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Present · MeeTeam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Rendered submission content on slides, inheriting the slide's light-on-dark text */
+  .pre-md { text-align:left; font-size:2.5vmin; line-height:1.5; max-width:74vw; margin:2.4vmin auto 0; }
+  .pre-md h1,.pre-md h2,.pre-md h3 { margin:.5em 0 .3em; }
+  .pre-md ul,.pre-md ol { padding-left:1.3em; margin:.3em 0; }
+  .pre-md li { margin:.2em 0; }
+  .pre-md hr { border:none; border-top:1px solid rgba(255,255,255,.25); margin:.8em 0; }
+  .pre-md a { color:inherit; }
+  .present-media { max-width:82vw; max-height:70vh; object-fit:contain; border-radius:1vmin; }
+  .present-pdf { width:82vw; height:74vh; border:none; border-radius:1vmin; background:#fff; }
+  .present-link { font-size:2.6vmin; text-decoration:underline; color:inherit; }
+</style>
+</head>
+<body class="present-body">
+
+<div class="reveal" id="deck">
+  <div class="topline">
+    <span class="brand-sm">
+      <svg class="mark" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="9" fill="#3b4dd8"/>
+        <circle cx="12.6" cy="16" r="5.4" fill="#fff"/>
+        <circle cx="19.4" cy="16" r="5.4" fill="#fff" fill-opacity=".55"/>
+      </svg>
+      MeeTeam
+    </span>
+    <span class="counter" id="counter">01 / 01</span>
+  </div>
+
+  <div class="slides" id="slides"></div>
+
+  <div class="progress" id="progress"></div>
+
+  <div class="hint">
+    <kbd>←</kbd> <kbd>→</kbd> navigate &nbsp;·&nbsp; <kbd>F</kbd> fullscreen &nbsp;·&nbsp; <kbd>Esc</kbd> exit
+  </div>
+
+  <div class="nav">
+    <button id="prev" type="button" aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <button id="next" type="button" aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+  </div>
+
+  <a class="back" href="admin.html" aria-label="Exit to admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+<script src="config.js"></script>
+<script src="supa.js"></script>
+<script src="lib.js"></script>
+<script>
+(async function(){
+  await requireAuth();
+  const md = window.markdownit({ html: false, linkify: true, breaks: true });
+  const meeting = await activeMeeting();
+  function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  const PALETTE = ['#3b4dd8','#0f8a5f','#b5850b','#8a4fd0','#c2410c','#0891b2'];
+  const initials = (n) => n.trim().split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase();
+  const badge = (name, color) =>
+    '<span style="display:inline-grid;place-items:center;width:2.6vmin;height:2.6vmin;border-radius:.6vmin;background:' +
+    color + ';color:#fff;font-size:1.4vmin;">' + initials(name) + '</span> ' + esc(name);
+  const slide = (inner) => '<section><div class="inner">' + inner + '</div></section>';
+
+  const parts = [];
+
+  if (!meeting) {
+    parts.push(slide('<div class="s-title">No active meeting</div>'));
+  } else {
+    // Title slide
+    parts.push(slide(
+      '<div class="eyebrow">' + esc(meeting.org || '') + ' · ' + esc(meeting.title || '') + '</div>' +
+      '<div class="s-title">' + esc(meeting.title || 'Meeting') + '</div>' +
+      '<div class="s-sub">' + esc(meeting.meeting_date || '') + '</div>'
+    ));
+
+    const { data: teams } = await supa.from('teams').select('*').order('name');
+    const { data: subs } = await supa.from('submissions').select('*').eq('meeting_id', meeting.id);
+    const { data: notes } = await supa.from('notes').select('team_id, pre_note').eq('meeting_id', meeting.id);
+    const preOf = (id) => (notes.find(n => n.team_id === id) || {}).pre_note || '';
+
+    let idx = 0;
+    for (const t of (teams || [])) {
+      const color = PALETTE[idx % PALETTE.length]; idx++;
+      const mine = subs.filter(s => s.team_id === t.id);
+      const pre = preOf(t.id);
+      if (!mine.length && !pre.trim()) continue;
+
+      // team update slide (pre-meeting note)
+      parts.push(slide(
+        '<div class="eyebrow">' + badge(t.name, color) + '</div>' +
+        '<h2 class="s-head">' + esc(t.name) + '</h2>' +
+        (pre.trim() ? '<div class="pre-md">' + md.render(pre) + '</div>'
+                    : '<div class="pre-md"><em>No written update.</em></div>')
+      ));
+
+      // one slide per file
+      for (const f of mine) {
+        const kind = classifyFile(f.file_name);
+        const url = await signedUrl(f.file_path);
+        const head = '<div class="eyebrow">' + badge(t.name, color) + ' · ' + esc(f.file_name) + '</div>';
+        if (kind === 'image') {
+          parts.push(slide(head + '<img class="present-media" src="' + url + '" alt="' + esc(f.file_name) + '">'));
+        } else if (kind === 'pdf') {
+          parts.push(slide(head + '<embed class="present-pdf" src="' + url + '" type="application/pdf">'));
+        } else if (kind === 'markdown') {
+          const text = await (await fetch(url)).text();
+          parts.push(slide(head + '<div class="pre-md">' + md.render(text) + '</div>'));
+        } else {
+          parts.push(slide(head + '<a class="present-link" href="' + url + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>'));
+        }
+      }
+    }
+    if (parts.length === 1) parts.push(slide('<div class="s-sub">No submissions yet.</div>'));
+  }
+
+  document.getElementById('slides').innerHTML = parts.join('');
+
+  /* ---------- Navigation (from the design, over the generated slides) ---------- */
+  const slides = Array.prototype.slice.call(document.querySelectorAll('#slides > section'));
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  const deckEl = document.documentElement;
+  const total = slides.length;
+  const pad = (n) => String(n).length < 2 ? '0' + n : '' + n;
+  let i = 0;
+  function show(n){
+    i = Math.max(0, Math.min(total - 1, n));
+    slides.forEach((sec, idx) => sec.classList.toggle('is-active', idx === i));
+    counter.textContent = pad(i + 1) + ' / ' + pad(total);
+    progress.style.width = ((i + 1) / total * 100) + '%';
+  }
+  const next = () => show(i + 1), prev = () => show(i - 1);
+  function toggleFs(){
+    if (document.fullscreenElement){ if (document.exitFullscreen) document.exitFullscreen(); }
+    else if (deckEl.requestFullscreen){ deckEl.requestFullscreen(); }
+  }
+  document.addEventListener('keydown', function(e){
+    switch(e.key){
+      case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown': e.preventDefault(); next(); break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': e.preventDefault(); prev(); break;
+      case 'Home': show(0); break;
+      case 'End': show(total - 1); break;
+      case 'f': case 'F': e.preventDefault(); toggleFs(); break;
+      case 'Escape': if(!document.fullscreenElement){ location.href = 'admin.html'; } break;
+    }
+  });
+  document.getElementById('next').addEventListener('click', next);
+  document.getElementById('prev').addEventListener('click', prev);
+  show(0);
+})();
+</script>
+</body>
+</html>
