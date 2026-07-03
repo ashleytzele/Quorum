@@ -81,12 +81,14 @@ alter table meetings enable row level security;
 alter table notes enable row level security;
 alter table submissions enable row level security;
 
--- helper: is the caller an admin?
-create or replace function is_admin() returns boolean language sql stable as $$
+-- helpers MUST be SECURITY DEFINER: they query profiles, and the profiles RLS
+-- policy calls is_admin() — without DEFINER that recurses infinitely.
+create or replace function is_admin() returns boolean
+  language sql stable security definer set search_path = public as $$
   select exists (select 1 from profiles where id = auth.uid() and role = 'admin');
 $$;
--- helper: caller's team
-create or replace function my_team() returns uuid language sql stable as $$
+create or replace function my_team() returns uuid
+  language sql stable security definer set search_path = public as $$
   select team_id from profiles where id = auth.uid();
 $$;
 
