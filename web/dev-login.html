@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dev sign in · MeeTeam</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="auth">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <svg class="mark" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="9" fill="#3b4dd8"/>
+          <circle cx="12.6" cy="16" r="5.4" fill="#fff"/>
+          <circle cx="19.4" cy="16" r="5.4" fill="#fff" fill-opacity=".55"/>
+        </svg>
+        <span>MeeTeam</span>
+      </div>
+      <h1>Dev sign in</h1>
+      <p class="sub">Temporary password login — bypasses email while it's rate-limited. Remove before production.</p>
+      <form id="pw-form" novalidate>
+        <div class="field">
+          <label class="label" for="email">Email</label>
+          <input class="input" type="email" id="email" value="<dev-email>" autocomplete="username">
+        </div>
+        <div class="field">
+          <label class="label" for="password">Password</label>
+          <input class="input" type="password" id="password" placeholder="<dev-password>" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary btn-lg btn-block" type="submit">Sign in</button>
+      </form>
+      <p class="auth-msg" id="msg" role="status" aria-live="polite"></p>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="supa.js"></script>
+  <script>
+  (function(){
+    const form = document.getElementById('pw-form');
+    const msg = document.getElementById('msg');
+    const btn = form.querySelector('button[type=submit]');
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      btn.disabled = true; btn.textContent = 'Signing in…'; msg.className = 'auth-msg';
+      const { error } = await supa.auth.signInWithPassword({
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+      });
+      if (error) {
+        console.error(error);
+        msg.textContent = error.message || 'Sign-in failed';
+        msg.classList.add('err');
+        btn.disabled = false; btn.textContent = 'Sign in';
+        return;
+      }
+      const p = await currentProfile();
+      location.href = (p && p.role === 'admin') ? 'admin.html' : 'team.html';
+    });
+  })();
+  </script>
+</body>
+</html>
