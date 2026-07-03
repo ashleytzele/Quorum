@@ -1,0 +1,34 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #1a1a1a; }
+
+#nav { display: flex; gap: .5rem; align-items: center; padding: .5rem 1rem;
+  border-bottom: 1px solid #ddd; background: #fafafa; position: sticky; top: 0; z-index: 10; }
+#nav button { padding: .4rem .8rem; border: 1px solid #ccc; background: #fff; border-radius: 6px; cursor: pointer; }
+#nav button.active { background: #1a1a1a; color: #fff; }
+#folder-pick { margin-left: auto; padding: .4rem .8rem; border: 1px solid #ccc;
+  border-radius: 6px; cursor: pointer; background: #fff; }
+
+.screen { display: none; padding: 1rem; }
+.screen.active { display: block; }
+.hint { color: #666; }
+
+/* Before: reveal deck only tall enough to preview; F for fullscreen */
+#screen-before .reveal { height: 78vh; }
+
+/* During: one card per team */
+#capture .team-card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+#capture h3 { margin: 0 0 .5rem; }
+#capture textarea { width: 100%; min-height: 5rem; font: inherit; }
+#capture .preview { border-top: 1px dashed #ddd; margin-top: .5rem; padding-top: .5rem; color: #333; }
+
+/* After: header controls + rendered minutes */
+.mom-header { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.mom-header input, .mom-header textarea { font: inherit; padding: .4rem; }
+#minutes { max-width: 720px; margin: 0 auto; }
+
+/* Print: only the minutes */
+@media print {
+  #nav, .no-print, #screen-before, #screen-during { display: none !important; }
+  .screen { display: block !important; padding: 0; }
+  #minutes { max-width: none; }
+}

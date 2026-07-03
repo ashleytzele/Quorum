@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meeting Minutes</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav id="nav">
+    <button data-screen="before" class="active">1 · Before</button>
+    <button data-screen="during">2 · During</button>
+    <button data-screen="after">3 · After</button>
+    <label id="folder-pick">
+      Open team folder
+      <input type="file" id="folderInput" webkitdirectory directory multiple hidden />
+    </label>
+  </nav>
+
+  <main>
+    <section id="screen-before" class="screen active">
+      <p class="hint" id="before-hint">Click “Open team folder” and pick your <code>team/</code> folder.</p>
+      <div class="reveal" id="deck"><div class="slides" id="slides"></div></div>
+    </section>
+
+    <section id="screen-during" class="screen">
+      <p class="hint" id="during-hint">Open a team folder first — a note box appears per team.</p>
+      <div id="capture"></div>
+    </section>
+
+    <section id="screen-after" class="screen">
+      <div class="mom-header no-print">
+        <input id="mom-org" placeholder="Organization" />
+        <input id="mom-title" placeholder="Meeting title" />
+        <input id="mom-date" type="date" />
+        <textarea id="mom-decisions" placeholder="Decisions (one per line)"></textarea>
+        <button id="mom-generate">Generate minutes</button>
+        <button id="mom-print">Print / Save PDF</button>
+      </div>
+      <article id="minutes"></article>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+  <script src="lib.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
