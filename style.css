@@ -17,6 +17,19 @@ body.dragging { outline: 3px dashed #1a1a1a; outline-offset: -8px; background: #
 /* Before: reveal deck only tall enough to preview; F for fullscreen */
 #screen-before .reveal { height: 78vh; }
 
+/* Slides read like clean pages */
+#deck .slide-head { font-size: 0.42em; color: #64748b; text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 0.6em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
+#deck .team-title h1 { font-size: 2.4em; }
+#deck section.doc { text-align: left; }
+#deck .doc-body { font-size: 0.72em; line-height: 1.35; }
+#deck .doc-body h1, #deck .doc-body h2, #deck .doc-body h3 { text-align: left; margin: 0.3em 0; }
+#deck .doc-body ul { display: block; }
+#deck .filelink { font-size: 0.7em; }
+#deck section.media { text-align: center; }
+#deck section.media img { max-width: 100%; max-height: 76vh; object-fit: contain; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+#deck section.media embed { width: 92%; height: 76vh; }
+
 /* During: one card per team */
 #capture .team-card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
 #capture h3 { margin: 0 0 .5rem; }

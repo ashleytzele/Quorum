@@ -19,33 +19,41 @@ document.querySelectorAll('#nav button[data-screen]').forEach((b) => {
   b.addEventListener('click', () => showScreen(b.dataset.screen));
 });
 
-// ---- read one file into a reveal <section> (async) ----
-async function fileToSection(entry) {
+// ---- read one file into one or more reveal <section>s (async) ----
+// Each file (or each `---` chunk of a doc) is its own full-page slide, headed by
+// "Team · filename". Flat structure: every slide is navigated left/right.
+async function fileToSection(entry, team) {
+  const head = (extra = '') =>
+    `<div class="slide-head">${esc(team)} · ${esc(entry.name)}${extra}</div>`;
+
   if (entry.kind === 'markdown') {
     const text = await entry.file.text();
-    return splitSlides(text)
-      .map((chunk) => `<section>${md.render(chunk)}</section>`)
-      .join('') || `<section><em>${esc(entry.name)} (empty)</em></section>`;
+    const chunks = splitSlides(text);
+    if (!chunks.length) return `<section class="doc">${head()}<em>(empty)</em></section>`;
+    return chunks
+      .map((chunk, i) => {
+        const n = chunks.length > 1 ? ` (${i + 1}/${chunks.length})` : '';
+        return `<section class="doc">${head(n)}<div class="doc-body">${md.render(chunk)}</div></section>`;
+      })
+      .join('');
   }
   const url = URL.createObjectURL(entry.file);
   if (entry.kind === 'image') {
-    return `<section><h3>${esc(entry.name)}</h3><img src="${url}" style="max-height:70vh" /></section>`;
+    return `<section class="media">${head()}<img src="${url}" /></section>`;
   }
   if (entry.kind === 'pdf') {
-    return `<section><h3>${esc(entry.name)}</h3><embed src="${url}" type="application/pdf" style="width:90%;height:70vh" /></section>`;
+    return `<section class="media">${head()}<embed src="${url}" type="application/pdf" /></section>`;
   }
-  return `<section><h3>${esc(entry.name)}</h3><a href="${url}" target="_blank" rel="noopener">Open ${esc(entry.name)}</a></section>`;
+  return `<section class="doc">${head()}<a class="filelink" href="${url}" target="_blank" rel="noopener">Open ${esc(entry.name)}</a></section>`;
 }
 
-// ---- build the whole deck ----
+// ---- build the whole deck (flat: team title page, then a page per file) ----
 async function renderSlides() {
   const slides = document.getElementById('slides');
   const parts = [];
   for (const g of STATE.groups) {
-    const inner = [`<section><h2>${esc(g.team)}</h2></section>`];
-    for (const entry of g.files) inner.push(await fileToSection(entry));
-    // one horizontal group per team, files as vertical slides
-    parts.push(`<section>${inner.join('')}</section>`);
+    parts.push(`<section class="team-title"><h1>${esc(g.team)}</h1></section>`);
+    for (const entry of g.files) parts.push(await fileToSection(entry, g.team));
   }
   slides.innerHTML = parts.join('') || '<section>No teams found.</section>';
 
