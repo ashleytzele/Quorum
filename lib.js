@@ -21,13 +21,6 @@ function isAccepted(name) {
   return DOC_EXT.includes(ext) || IMG_EXT.includes(ext);
 }
 
-function splitSlides(text) {
-  return String(text)
-    .split(/\r?\n---\r?\n/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
-
 function groupFilesByTeam(files) {
   const map = new Map();
   for (const f of files) {
@@ -63,5 +56,5 @@ function buildMinutesMarkdown({ org, title, date, teams, decisions }) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { classifyFile, isAccepted, splitSlides, groupFilesByTeam, buildMinutesMarkdown };
+  module.exports = { classifyFile, isAccepted, groupFilesByTeam, buildMinutesMarkdown };
 }

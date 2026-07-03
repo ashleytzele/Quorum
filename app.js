@@ -28,14 +28,9 @@ async function fileToSection(entry, team) {
 
   if (entry.kind === 'markdown') {
     const text = await entry.file.text();
-    const chunks = splitSlides(text);
-    if (!chunks.length) return `<section class="doc">${head()}<em>(empty)</em></section>`;
-    return chunks
-      .map((chunk, i) => {
-        const n = chunks.length > 1 ? ` (${i + 1}/${chunks.length})` : '';
-        return `<section class="doc">${head(n)}<div class="doc-body">${md.render(chunk)}</div></section>`;
-      })
-      .join('');
+    if (!text.trim()) return `<section class="doc">${head()}<em>(empty)</em></section>`;
+    // Whole file on one slide; `---` becomes an <hr> divider between projects.
+    return `<section class="doc">${head()}<div class="doc-body">${md.render(text)}</div></section>`;
   }
   const url = URL.createObjectURL(entry.file);
   if (entry.kind === 'image') {

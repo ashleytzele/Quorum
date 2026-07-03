@@ -25,16 +25,6 @@ test('isAccepted allows docs and pictures, rejects the rest', () => {
   }
 });
 
-const { splitSlides } = require('./lib.js');
-
-test('splitSlides splits on --- and drops empties', () => {
-  assert.deepEqual(splitSlides('a\n---\nb'), ['a', 'b']);
-  assert.deepEqual(splitSlides('only one'), ['only one']);
-  assert.deepEqual(splitSlides(''), []);
-  assert.deepEqual(splitSlides('a\r\n---\r\nb'), ['a', 'b']);
-  assert.deepEqual(splitSlides('  x  \n---\n\n'), ['x']);
-});
-
 const { groupFilesByTeam } = require('./lib.js');
 
 test('groupFilesByTeam: subfolder = team, loose file = its own team (by filename)', () => {
