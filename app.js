@@ -79,23 +79,35 @@ async function loadFiles(items) {
 document.getElementById('folderInput').addEventListener('change', (e) => loadFiles([...e.target.files]));
 
 // ---- drag-and-drop (files or a folder, dropped anywhere on the page) ----
-// Recurse dropped directory entries into flat {name, webkitRelativePath, file} wrappers
-// whose path matches the folder-input shape (root/team/file), so grouping is identical.
-function readEntry(entry, prefix, out) {
+// Read all entries from a directory reader (readEntries returns in batches — must
+// loop until it returns empty, or large folders get truncated).
+function readAllEntries(reader) {
   return new Promise((resolve) => {
-    if (entry.isFile) {
+    const all = [];
+    const next = () =>
+      reader.readEntries((batch) => {
+        if (!batch.length) return resolve(all);
+        all.push(...batch);
+        next();
+      }, () => resolve(all));
+    next();
+  });
+}
+
+// Recurse a dropped directory entry into flat {name, webkitRelativePath, file}
+// wrappers whose path matches the folder-input shape (root/team/file).
+async function readEntry(entry, prefix, out) {
+  if (entry.isFile) {
+    await new Promise((resolve) => {
       entry.file((file) => {
         out.push({ name: file.name, webkitRelativePath: prefix + file.name, file });
         resolve();
       }, resolve);
-    } else if (entry.isDirectory) {
-      entry.createReader().readEntries((entries) => {
-        Promise.all(entries.map((e) => readEntry(e, prefix + entry.name + '/', out))).then(resolve);
-      }, resolve);
-    } else {
-      resolve();
-    }
-  });
+    });
+  } else if (entry.isDirectory) {
+    const entries = await readAllEntries(entry.createReader());
+    for (const e of entries) await readEntry(e, prefix + entry.name + '/', out);
+  }
 }
 
 const body = document.body;
@@ -104,15 +116,19 @@ body.addEventListener('dragleave', (e) => { if (e.target === body) body.classLis
 body.addEventListener('drop', async (e) => {
   e.preventDefault();
   body.classList.remove('dragging');
-  // webkitGetAsEntry() must be called synchronously, before any await.
-  const entries = [...e.dataTransfer.items]
+  // webkitGetAsEntry() must be read synchronously, before any await.
+  const entries = [...(e.dataTransfer.items || [])]
     .map((it) => (it.webkitGetAsEntry ? it.webkitGetAsEntry() : null))
     .filter(Boolean);
+  const droppedFiles = [...e.dataTransfer.files]; // reliable on file://, unlike entry.file()
   const out = [];
-  if (entries.length) {
-    await Promise.all(entries.map((en) => readEntry(en, '', out)));
-  } else {
-    for (const f of e.dataTransfer.files) out.push({ name: f.name, webkitRelativePath: f.name, file: f });
+  // Only use the entry API when an actual directory was dropped (to preserve team
+  // grouping). Plain files go straight through dataTransfer.files.
+  if (entries.some((en) => en.isDirectory)) {
+    for (const en of entries) await readEntry(en, '', out);
+  }
+  if (!out.length) {
+    for (const f of droppedFiles) out.push({ name: f.name, webkitRelativePath: f.name, file: f });
   }
   loadFiles(out);
 });
