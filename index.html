@@ -14,14 +14,14 @@
     <button data-screen="during">2 · During</button>
     <button data-screen="after">3 · After</button>
     <label id="folder-pick">
-      Open team folder
-      <input type="file" id="folderInput" webkitdirectory directory multiple hidden />
+      Choose files
+      <input type="file" id="folderInput" multiple hidden />
     </label>
   </nav>
 
   <main>
     <section id="screen-before" class="screen active">
-      <p class="hint" id="before-hint"><strong>Drag files or a folder anywhere onto this page</strong> — or click “Open team folder”. Each file (or subfolder) becomes a team slide.</p>
+      <p class="hint" id="before-hint"><strong>Drag files or a folder anywhere onto this page</strong> — or click “Choose files” to pick them. Each file becomes a team slide; drop a folder to group its files by subfolder.</p>
       <div class="reveal" id="deck"><div class="slides" id="slides"></div></div>
     </section>
 
