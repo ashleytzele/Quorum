@@ -1,11 +1,24 @@
 'use strict';
 
+const DOC_EXT = ['md', 'markdown', 'txt', 'pdf', 'doc', 'docx', 'rtf', 'odt'];
+const IMG_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+
+function extOf(name) {
+  return String(name).toLowerCase().split('.').pop();
+}
+
 function classifyFile(name) {
-  const ext = String(name).toLowerCase().split('.').pop();
+  const ext = extOf(name);
   if (['md', 'markdown', 'txt'].includes(ext)) return 'markdown';
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) return 'image';
+  if (IMG_EXT.includes(ext)) return 'image';
   if (ext === 'pdf') return 'pdf';
   return 'other';
+}
+
+// Only document files and pictures are allowed in.
+function isAccepted(name) {
+  const ext = extOf(name);
+  return DOC_EXT.includes(ext) || IMG_EXT.includes(ext);
 }
 
 function splitSlides(text) {
@@ -50,5 +63,5 @@ function buildMinutesMarkdown({ org, title, date, teams, decisions }) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { classifyFile, splitSlides, groupFilesByTeam, buildMinutesMarkdown };
+  module.exports = { classifyFile, isAccepted, splitSlides, groupFilesByTeam, buildMinutesMarkdown };
 }

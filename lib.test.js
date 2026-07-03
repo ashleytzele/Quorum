@@ -14,6 +14,17 @@ test('classifyFile maps extensions to kinds', () => {
   assert.equal(classifyFile('noext'), 'other');
 });
 
+const { isAccepted } = require('./lib.js');
+
+test('isAccepted allows docs and pictures, rejects the rest', () => {
+  for (const ok of ['a.pdf', 'b.DOCX', 'c.doc', 'd.txt', 'e.md', 'f.png', 'g.JPG', 'h.webp']) {
+    assert.equal(isAccepted(ok), true, ok);
+  }
+  for (const no of ['a.zip', 'b.mp4', 'c.exe', 'd.csv', 'noext']) {
+    assert.equal(isAccepted(no), false, no);
+  }
+});
+
 const { splitSlides } = require('./lib.js');
 
 test('splitSlides splits on --- and drops empties', () => {

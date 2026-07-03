@@ -61,10 +61,19 @@ async function renderSlides() {
 // ---- load files (shared by folder picker and drag-drop) ----
 // items: array of File objects (folder input) or {name, webkitRelativePath, file} wrappers (drop).
 async function loadFiles(items) {
-  if (STATE.rendering || !items.length) return; // single in-flight guard
+  if (STATE.rendering) return; // single in-flight guard
+  const accepted = items.filter((f) => isAccepted(f.name));
+  const rejected = items.length - accepted.length;
+  const hint = document.getElementById('before-hint');
+  if (!accepted.length) {
+    hint.style.display = '';
+    hint.innerHTML = 'Only <strong>document</strong> and <strong>picture</strong> files are supported (pdf, doc/docx, txt, md, png, jpg…). Try again.';
+    return;
+  }
   STATE.rendering = true;
   try {
-    STATE.groups = groupFilesByTeam(items);
+    STATE.groups = groupFilesByTeam(accepted);
+    if (rejected) console.warn(`${rejected} file(s) skipped — not a document or picture.`);
     const has = STATE.groups.length;
     document.getElementById('before-hint').style.display = has ? 'none' : '';
     document.getElementById('during-hint').style.display = has ? 'none' : '';
