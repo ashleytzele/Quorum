@@ -26,20 +26,23 @@ test('splitSlides splits on --- and drops empties', () => {
 
 const { groupFilesByTeam } = require('./lib.js');
 
-test('groupFilesByTeam groups by second path segment, sorted', () => {
+test('groupFilesByTeam: subfolder = team, loose file = its own team (by filename)', () => {
   const files = [
     { name: 'notes.md', webkitRelativePath: 'team/Tech/notes.md' },
     { name: 'shot.png', webkitRelativePath: 'team/Tech/shot.png' },
     { name: 'roadmap.pdf', webkitRelativePath: 'team/R&D/roadmap.pdf' },
-    { name: 'stray.txt', webkitRelativePath: 'team/stray.txt' }, // skipped: too shallow
+    { name: 'Sales.txt', webkitRelativePath: 'team/Sales.txt' }, // loose → team "Sales"
   ];
   const groups = groupFilesByTeam(files);
-  assert.deepEqual(groups.map((g) => g.team), ['R&D', 'Tech']);
+  assert.deepEqual(groups.map((g) => g.team), ['R&D', 'Sales', 'Tech']);
   const tech = groups.find((g) => g.team === 'Tech');
   assert.equal(tech.files.length, 2);
   assert.equal(tech.files[0].kind, 'markdown');
   assert.equal(tech.files[1].kind, 'image');
   assert.equal(tech.files[0].file, files[0]); // original passed through
+  const sales = groups.find((g) => g.team === 'Sales');
+  assert.equal(sales.files.length, 1);
+  assert.equal(sales.files[0].name, 'Sales.txt'); // extension stripped only from team name
 });
 
 const { buildMinutesMarkdown } = require('./lib.js');

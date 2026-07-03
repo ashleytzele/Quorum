@@ -18,9 +18,11 @@ function splitSlides(text) {
 function groupFilesByTeam(files) {
   const map = new Map();
   for (const f of files) {
-    const parts = String(f.webkitRelativePath).split('/');
-    if (parts.length < 3) continue; // need root/team/file
-    const team = parts[1];
+    const parts = String(f.webkitRelativePath || f.name).split('/');
+    // A file in a subfolder (root/team/file) is grouped under the subfolder name.
+    // A file sitting loose in the picked folder becomes its own team, named after
+    // the file (extension stripped) — so you can just drop files in, no structure needed.
+    const team = parts.length >= 3 ? parts[1] : f.name.replace(/\.[^./]+$/, '');
     if (!map.has(team)) map.set(team, []);
     map.get(team).push({
       name: f.name,
