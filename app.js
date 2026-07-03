@@ -80,9 +80,12 @@ showScreen('before');
 function buildCapture() {
   const box = document.getElementById('capture');
   box.innerHTML = '';
-  STATE.notes = {};
+  // Keep notes already typed for teams that still exist (folder re-pick mid-meeting
+  // must not silently wipe captured notes); drop only teams no longer present.
+  const kept = {};
+  for (const g of STATE.groups) kept[g.team] = STATE.notes[g.team] || '';
+  STATE.notes = kept;
   for (const g of STATE.groups) {
-    STATE.notes[g.team] = '';
     const card = document.createElement('div');
     card.className = 'team-card';
     card.innerHTML = `<h3>${esc(g.team)}</h3>
@@ -90,6 +93,8 @@ function buildCapture() {
       <div class="preview"></div>`;
     const ta = card.querySelector('textarea');
     const pv = card.querySelector('.preview');
+    ta.value = STATE.notes[g.team];              // restore any preserved note
+    pv.innerHTML = md.render(ta.value);
     ta.addEventListener('input', () => {
       STATE.notes[g.team] = ta.value;
       pv.innerHTML = md.render(ta.value);
