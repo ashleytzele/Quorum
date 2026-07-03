@@ -30,13 +30,20 @@ manager.
 ## The meeting lifecycle (async — v1)
 
 1. **Admin** creates a meeting (title, date, org) → it becomes the *active* meeting.
-2. **Before:** each team logs in, uploads files, writes notes for the active meeting.
-   All async, any time before the meeting.
-3. **At the meeting:** admin opens the **Present** view — the app pulls every team's
-   files from Storage and builds one slideshow (one team title page, then a page per
-   file, reusing the local tool's flat page-per-file layout).
-4. **After:** admin opens **Minutes** — the app pulls every team's notes and fills the
-   MoM template (Header · Team updates · Decisions), then prints to PDF for the manager.
+2. **Before:** each team logs in and provides two things for the active meeting, all
+   async:
+   - **Pre-meeting submission (presentation):** either type a **pre-meeting note** or
+     upload **files** (or both). Autosaves, with a **Draft/Submitted** toggle. → drives
+     the slideshow.
+   - **Meeting notes (minutes):** a separate note whose content fills this team's
+     section in the minutes. Autosaves.
+3. **At the meeting:** admin opens the **Present** view — the app builds one slideshow
+   from every team's uploaded **files** and **pre-meeting notes** (one team title page,
+   then a page per file / per note, reusing the local tool's flat page-per-file layout).
+4. **After:** admin opens **Minutes** — the app pulls every team's **meeting notes** and
+   fills the MoM template (Header · Team updates · Decisions), prints to PDF for the
+   manager, and **stores the finalized minutes** on the meeting (`meetings.minutes_final`)
+   so teams can view it later in History.
 
 Live co-editing during the meeting (real-time sync) is **v2**, not v1.
 
@@ -46,8 +53,8 @@ Tables (Postgres):
 
 - `teams` — `id uuid pk`, `name text unique`
 - `profiles` — `id uuid pk → auth.users`, `team_id uuid → teams`, `role text default 'member'` (`'member'|'admin'`)
-- `meetings` — `id uuid pk`, `title text`, `meeting_date date`, `org text`, `is_active bool default true`, `created_at timestamptz default now()`
-- `notes` — `id uuid pk`, `meeting_id uuid → meetings`, `team_id uuid → teams`, `content text default ''`, `updated_at timestamptz default now()`, `unique(meeting_id, team_id)`
+- `meetings` — `id uuid pk`, `title text`, `meeting_date date`, `org text`, `is_active bool default true`, `minutes_final text` (the exported MoM markdown, stored when the admin finalizes; readable by all so History can show it), `created_at timestamptz default now()`
+- `notes` — `id uuid pk`, `meeting_id uuid → meetings`, `team_id uuid → teams`, **`pre_note text default ''`** (pre-meeting note → shown in the presentation), **`content text default ''`** (meeting notes → fill the minutes), **`submitted bool default false`** (the Draft/Submitted toggle for the pre-meeting submission), `updated_at timestamptz default now()`, `unique(meeting_id, team_id)`
 - `submissions` — `id uuid pk`, `meeting_id uuid → meetings`, `team_id uuid → teams`, `file_path text`, `file_name text`, `mime text`, `created_at timestamptz default now()`
 
 Storage:
@@ -66,14 +73,23 @@ Security (Row-Level Security — required, this is a multi-tenant app):
 ## Screens
 
 1. **Login** — email magic-link (Supabase Auth). No passwords.
-2. **Team dashboard** (member) — active meeting header; drag-drop/upload files
-   (documents + pictures only); list of this team's uploaded files with remove;
-   a notes editor with live Markdown preview; autosave.
-3. **Admin dashboard** — meeting settings (title/date/org, create/activate); a table
-   of teams showing files count + notes status; buttons: **Present**, **Export minutes**.
-4. **Present** — the slideshow built from all teams' files (reused flat page-per-file
-   deck; fullscreen; arrow keys).
-5. **Minutes** — the combined MoM rendered from all teams' notes; **Print / Save PDF**.
+2. **Team dashboard** (member) — active meeting header + a **History** link. Three
+   sections:
+   - **Pre-meeting submission (presentation):** type a pre-meeting note *or* upload
+     files (documents + pictures only) with a file list + remove; autosave +
+     **Draft/Submitted** toggle.
+   - **Meeting notes (minutes):** a separate Markdown notes editor with live preview;
+     autosave.
+3. **Admin dashboard** — meeting settings (title/date/org, create/activate); a table of
+   teams showing file count + notes/submitted status. Clicking a team opens a **drill-down**
+   with its **files** (openable) and a **rendered notes preview**. Buttons: **Present**,
+   **Preview slideshow**, **Export minutes**.
+4. **Present** — the slideshow built from all teams' **files + pre-meeting notes**
+   (reused flat page-per-file deck; fullscreen; arrow keys).
+5. **Minutes** — the combined MoM rendered from all teams' meeting notes;
+   **Print / Save PDF**; stores the finalized MoM on the meeting for History.
+6. **Team history** (member) — a list of past meetings; selecting one shows this team's
+   submitted notes + files for it, plus the meeting's **final minutes**. Read-only.
 
 ## Reused from the local tool
 
@@ -90,8 +106,8 @@ Security (Row-Level Security — required, this is a multi-tenant app):
 - AI note summarization.
 - DOCX export (PDF only).
 - Manager login / a manager portal.
-- Per-meeting history browsing UI (data is kept; no browse screen yet).
 - Team self-signup / org management (teams + admin are seeded by hand in v1).
+- Admin editing of a team's submitted notes/files (admin previews are read-only in v1).
 
 ## Assumptions to confirm
 
