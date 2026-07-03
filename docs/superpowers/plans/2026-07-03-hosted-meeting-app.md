@@ -139,8 +139,10 @@ insert into meetings (title, meeting_date, org, is_active)
 Note: add a trigger so a `profiles` row is auto-created on signup:
 
 ```sql
-create or replace function handle_new_user() returns trigger language plpgsql security definer as $$
-begin insert into profiles (id) values (new.id); return new; end; $$;
+-- search_path MUST be pinned or signup fails with "Database error saving new user".
+create or replace function handle_new_user() returns trigger
+  language plpgsql security definer set search_path = public as $$
+begin insert into public.profiles (id) values (new.id) on conflict (id) do nothing; return new; end; $$;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function handle_new_user();
 ```

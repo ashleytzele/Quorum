@@ -23,7 +23,8 @@
       options: { emailRedirectTo: location.origin + location.pathname.replace(/index\.html$/, '') + 'route.html' },
     });
     if (error) {
-      msg.textContent = error.message;
+      console.error('signInWithOtp error:', error);
+      msg.textContent = error.message || error.msg || ('Sign-in failed (' + (error.status || 'unknown') + ') — see console');
       msg.classList.add('err');
       btn.disabled = false;
       btn.textContent = 'Send me a login link';
