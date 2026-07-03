@@ -4,7 +4,12 @@ const supa = window.supabase.createClient(window.SUPA_URL, window.SUPA_ANON);
 async function currentProfile() {
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return null;
-  const { data } = await supa.from('profiles').select('*, teams(name)').eq('id', user.id).single();
+  let { data } = await supa.from('profiles').select('*, teams(name)').eq('id', user.id).maybeSingle();
+  if (!data) {
+    // First login for this user — create their profile row (no server-side trigger).
+    await supa.from('profiles').insert({ id: user.id });
+    ({ data } = await supa.from('profiles').select('*, teams(name)').eq('id', user.id).maybeSingle());
+  }
   return data; // { id, team_id, role, teams: { name } }
 }
 
