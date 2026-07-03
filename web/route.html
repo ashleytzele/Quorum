@@ -15,9 +15,23 @@
   <script src="config.js"></script>
   <script src="supa.js"></script>
   <script>
-    // After the magic-link redirect, send admins to admin.html and members to team.html.
+    // After the magic-link redirect, wait for supabase-js to process the token/code
+    // in the URL (it's async), then route admins to admin.html and members to team.html.
     (async () => {
-      await requireAuth('index.html');
+      let { data: { session } } = await supa.auth.getSession();
+      if (!session) {
+        session = await new Promise((resolve) => {
+          const { data: sub } = supa.auth.onAuthStateChange((_e, s) => {
+            if (s) { sub.subscription.unsubscribe(); resolve(s); }
+          });
+          setTimeout(() => resolve(null), 4000); // give the URL exchange time to finish
+        });
+      }
+      if (!session) {
+        document.getElementById('route-msg').textContent = 'Sign-in link could not be verified. Returning to login…';
+        setTimeout(() => { location.href = 'index.html'; }, 1500);
+        return;
+      }
       const p = await currentProfile();
       location.href = (p && p.role === 'admin') ? 'admin.html' : 'team.html';
     })();
