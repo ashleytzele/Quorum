@@ -28,7 +28,7 @@ function groupFilesByTeam(files) {
       name: f.name,
       path: f.webkitRelativePath,
       kind: classifyFile(f.name),
-      file: f,
+      file: f.file || f, // drop wrappers carry the real File in .file; folder-input items are Files
     });
   }
   return [...map.entries()]

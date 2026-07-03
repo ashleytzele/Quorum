@@ -58,20 +58,63 @@ async function renderSlides() {
   }
 }
 
-// ---- folder input ----
-document.getElementById('folderInput').addEventListener('change', async (e) => {
-  if (STATE.rendering) return; // ponytail: single in-flight guard, no queue needed for a folder picker
+// ---- load files (shared by folder picker and drag-drop) ----
+// items: array of File objects (folder input) or {name, webkitRelativePath, file} wrappers (drop).
+async function loadFiles(items) {
+  if (STATE.rendering || !items.length) return; // single in-flight guard
   STATE.rendering = true;
   try {
-    STATE.groups = groupFilesByTeam([...e.target.files]);
-    document.getElementById('before-hint').style.display = STATE.groups.length ? 'none' : '';
-    document.getElementById('during-hint').style.display = STATE.groups.length ? 'none' : '';
+    STATE.groups = groupFilesByTeam(items);
+    const has = STATE.groups.length;
+    document.getElementById('before-hint').style.display = has ? 'none' : '';
+    document.getElementById('during-hint').style.display = has ? 'none' : '';
     showScreen('before'); // init Reveal while the deck container is visible
     await renderSlides();
-    buildCapture();   // defined in Task 7
+    buildCapture();
   } finally {
     STATE.rendering = false;
   }
+}
+
+document.getElementById('folderInput').addEventListener('change', (e) => loadFiles([...e.target.files]));
+
+// ---- drag-and-drop (files or a folder, dropped anywhere on the page) ----
+// Recurse dropped directory entries into flat {name, webkitRelativePath, file} wrappers
+// whose path matches the folder-input shape (root/team/file), so grouping is identical.
+function readEntry(entry, prefix, out) {
+  return new Promise((resolve) => {
+    if (entry.isFile) {
+      entry.file((file) => {
+        out.push({ name: file.name, webkitRelativePath: prefix + file.name, file });
+        resolve();
+      }, resolve);
+    } else if (entry.isDirectory) {
+      entry.createReader().readEntries((entries) => {
+        Promise.all(entries.map((e) => readEntry(e, prefix + entry.name + '/', out))).then(resolve);
+      }, resolve);
+    } else {
+      resolve();
+    }
+  });
+}
+
+const body = document.body;
+body.addEventListener('dragover', (e) => { e.preventDefault(); body.classList.add('dragging'); });
+body.addEventListener('dragleave', (e) => { if (e.target === body) body.classList.remove('dragging'); });
+body.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  body.classList.remove('dragging');
+  // webkitGetAsEntry() must be called synchronously, before any await.
+  const entries = [...e.dataTransfer.items]
+    .map((it) => (it.webkitGetAsEntry ? it.webkitGetAsEntry() : null))
+    .filter(Boolean);
+  const out = [];
+  if (entries.length) {
+    await Promise.all(entries.map((en) => readEntry(en, '', out)));
+  } else {
+    for (const f of e.dataTransfer.files) out.push({ name: f.name, webkitRelativePath: f.name, file: f });
+  }
+  loadFiles(out);
 });
 
 showScreen('before');

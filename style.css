@@ -8,6 +8,8 @@ body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #1a1a1a; }
 #folder-pick { margin-left: auto; padding: .4rem .8rem; border: 1px solid #ccc;
   border-radius: 6px; cursor: pointer; background: #fff; }
 
+body.dragging { outline: 3px dashed #1a1a1a; outline-offset: -8px; background: #f0f6ff; }
+
 .screen { display: none; padding: 1rem; }
 .screen.active { display: block; }
 .hint { color: #666; }
