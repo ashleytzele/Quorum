@@ -46,7 +46,13 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>
             Meeting details
           </span>
-          <span class="status" id="meeting-saved"><span class="dot"></span>All changes saved</span>
+          <span style="display:flex;align-items:center;gap:14px;">
+            <span class="status" id="meeting-saved"><span class="dot"></span>All changes saved</span>
+            <button class="btn btn-ghost" id="new-meeting-btn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              New meeting
+            </button>
+          </span>
         </div>
         <div class="card-body">
           <form id="meeting-form" class="form-row">
@@ -176,6 +182,18 @@
   let mtimer;
   [fTitle, fDate, fOrg].forEach(function(f){ f.addEventListener('input', function(){ flashSaving(); clearTimeout(mtimer); mtimer = setTimeout(persistMeeting, 600); }); });
   document.getElementById('meeting-form').addEventListener('submit', function(e){ e.preventDefault(); persistMeeting(); });
+
+  // Start a fresh meeting: archive the current active one (it moves to History),
+  // then create a new active meeting the teams submit into.
+  document.getElementById('new-meeting-btn').addEventListener('click', async function(){
+    if (!confirm('Start a new meeting? The current meeting will be archived to History and teams will submit into the new one.')) return;
+    await supa.from('meetings').update({ is_active: false }).eq('is_active', true);
+    const today = new Date().toISOString().slice(0, 10);
+    await supa.from('meetings').insert({
+      title: fTitle.value || 'New meeting', meeting_date: today, org: fOrg.value, is_active: true,
+    });
+    location.reload();
+  });
 
   /* ---------- Load teams + submissions + notes ---------- */
   const { data: teams } = await supa.from('teams').select('*').order('name');
