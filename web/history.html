@@ -203,8 +203,7 @@
   meetings.forEach((m, idx) => {
     const li = document.createElement('li');
     li.className = 'hitem';
-    const modeTag = m.model === 'admin' ? ' <span class="mt-flag">VIP</span>'
-                  : m.model === 'hybrid' ? ' <span class="mt-flag">Hybrid</span>' : '';
+    const modeTag = m.model === 'admin' ? ' <span class="mt-flag">VIP</span>' : '';
     li.innerHTML = '<div class="htitle">' + esc(m.title) + modeTag + '</div>' +
       '<div class="hdate">' + esc(m.meeting_date || '') + '</div>' +
       '<div class="hmeta"><span>' + subsOfMeeting(m.id).length + ' files</span><span>' +
