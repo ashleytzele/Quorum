@@ -166,7 +166,16 @@
     const mNotes = (allNotes || []).filter(n => n.meeting_id === m.id);
     const mSubs = subsOfMeeting(m.id);
 
-    if (isAdmin) {
+    if (isAdmin && m.model === 'admin') {
+      // VIP (admin-run): single admin-authored content, no team grouping
+      const n = mNotes.find(x => x.team_id === me.team_id) || {};
+      notesEl.innerHTML =
+        '<h4>Pre-meeting note</h4>' + md.render(n.pre_note && n.pre_note.trim() ? n.pre_note : '_None._') +
+        '<h4>Meeting notes</h4>' + md.render(n.content && n.content.trim() ? n.content : '_No notes._');
+      const vf = mSubs.filter(s => s.team_id === me.team_id);
+      if (vf.length) { let h = ''; for (const f of vf) h += await fileLink(f); filesEl.innerHTML = h; }
+      else filesEl.innerHTML = '<div class="muted-note">No files were submitted.</div>';
+    } else if (isAdmin) {
       // group notes + files by team
       let nHtml = '', fHtml = '';
       for (const t of (teams || [])) {
@@ -194,7 +203,9 @@
   meetings.forEach((m, idx) => {
     const li = document.createElement('li');
     li.className = 'hitem';
-    li.innerHTML = '<div class="htitle">' + esc(m.title) + '</div>' +
+    const modeTag = m.model === 'admin' ? ' <span class="mt-flag">VIP</span>'
+                  : m.model === 'hybrid' ? ' <span class="mt-flag">Hybrid</span>' : '';
+    li.innerHTML = '<div class="htitle">' + esc(m.title) + modeTag + '</div>' +
       '<div class="hdate">' + esc(m.meeting_date || '') + '</div>' +
       '<div class="hmeta"><span>' + subsOfMeeting(m.id).length + ' files</span><span>' +
       (m.minutes_final ? 'minutes' : 'no minutes') + '</span></div>';
