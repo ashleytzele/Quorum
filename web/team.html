@@ -204,7 +204,7 @@
   }
 
   /* ---------- Markdown renderer (from the design) ---------- */
-  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function inline(s){
     s = s.replace(/`([^`]+)`/g, function(_,c){ return '<code>' + c + '</code>'; });
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');

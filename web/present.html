@@ -166,13 +166,13 @@
         }
         for (const f of includedFiles){
           const head = '<div class="eyebrow">' + badge(g.team.name, g.color) + ' · ' + esc(f.file_name) + '</div>';
-          if (f.url){ parts.push(slide(head + '<a class="present-link" href="' + f.url + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>')); continue; }
+          if (f.url){ parts.push(slide(head + '<a class="present-link" href="' + esc(f.url) + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>')); continue; }
           const kind = classifyFile(f.file_name);
           const url = await signedUrl(f.file_path);
           if (kind === 'image') parts.push(slide(head + '<img class="present-media" src="' + url + '" alt="' + esc(f.file_name) + '">'));
           else if (kind === 'pdf') parts.push(slide(head + '<embed class="present-pdf" src="' + url + '" type="application/pdf">'));
           else if (kind === 'markdown'){ const text = await (await fetch(url)).text(); parts.push(slide(head + '<div class="pre-md">' + md.render(text) + '</div>')); }
-          else parts.push(slide(head + '<a class="present-link" href="' + url + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>'));
+          else parts.push(slide(head + '<a class="present-link" href="' + esc(url) + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>'));
         }
       }
       if (parts.length === 1) parts.push(slide('<div class="s-sub">Nothing selected to present.</div>'));
