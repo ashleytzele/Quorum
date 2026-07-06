@@ -6,7 +6,7 @@
 <title>Present · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=5">
 <style>
   /* Rendered submission content on slides, inheriting the slide's light-on-dark text */
   .pre-md { text-align:left; font-size:2.5vmin; line-height:1.5; max-width:74vw; margin:2.4vmin auto 0; }
@@ -80,6 +80,7 @@
   const meeting = mParam
     ? ((await supa.from('meetings').select('*').eq('id', mParam).maybeSingle()).data || await selectedMeeting())
     : await selectedMeeting();
+  const isVip = !!(meeting && meeting.model === 'admin');  // admin-run: no team framing
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   const PALETTE = ['#3b4dd8','#0f8a5f','#b5850b','#8a4fd0','#c2410c','#0891b2'];
   const initials = (n) => n.trim().split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase();
@@ -124,7 +125,7 @@
     let html = '<div class="pf-card"><div class="pf-title">What to present</div>' +
       '<div class="pf-sub">' + esc(meeting.title || 'Meeting') + (meeting.meeting_date ? ' · ' + esc(meeting.meeting_date) : '') + '</div>';
     groups.forEach(function(g, gi){
-      html += '<div class="pf-team">' + esc(g.team.name) + '</div>';
+      html += '<div class="pf-team">' + (isVip ? 'Meeting content' : esc(g.team.name)) + '</div>';
       if (g.pre.trim()) html += pfItem(gi + '-pre', 'Pre-meeting note');
       g.files.forEach(function(f, fi){ html += pfItem(gi + '-f' + fi, esc(f.file_name) + (f.url ? ' <span style="color:#8a90a1;">· link</span>' : '')); });
     });
@@ -159,13 +160,17 @@
         if (!includePre && !includedFiles.length) continue;
         if (includePre){
           parts.push(slide(
-            '<div class="eyebrow">' + badge(g.team.name, g.color) + '</div>' +
-            '<h2 class="s-head">' + esc(g.team.name) + '</h2>' +
-            '<div class="pre-md">' + md.render(g.pre) + '</div>'
+            isVip
+              ? ('<div class="eyebrow">' + esc(meeting.title || 'Meeting') + '</div>' + '<div class="pre-md">' + md.render(g.pre) + '</div>')
+              : ('<div class="eyebrow">' + badge(g.team.name, g.color) + '</div>' +
+                 '<h2 class="s-head">' + esc(g.team.name) + '</h2>' +
+                 '<div class="pre-md">' + md.render(g.pre) + '</div>')
           ));
         }
         for (const f of includedFiles){
-          const head = '<div class="eyebrow">' + badge(g.team.name, g.color) + ' · ' + esc(f.file_name) + '</div>';
+          const head = isVip
+            ? ('<div class="eyebrow">' + esc(f.file_name) + '</div>')
+            : ('<div class="eyebrow">' + badge(g.team.name, g.color) + ' · ' + esc(f.file_name) + '</div>');
           if (f.url){ parts.push(slide(head + '<a class="present-link" href="' + esc(f.url) + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>')); continue; }
           const kind = classifyFile(f.file_name);
           const url = await signedUrl(f.file_path);

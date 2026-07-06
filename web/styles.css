@@ -312,6 +312,11 @@ body.present-body{background:#0e1018;overflow:hidden;}
 .mt-flag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.03em;padding:1px 6px;border-radius:6px;background:var(--accent-100);color:var(--accent-700);vertical-align:middle;}
 .pf-banner{background:var(--accent-50);color:var(--accent-700);border:1px solid var(--accent-100);border-radius:var(--radius-sm);padding:10px 14px;font-size:13.5px;margin-bottom:22px;}
 .pf-banner a{margin-left:8px;font-weight:600;}
+/* Embedded workspace (admin-run VIP meeting inside admin.html): strip page chrome */
+.embed .topbar,.embed .grid-head,.embed #meeting-tabs{display:none;}
+.embed body,.embed .page{background:transparent;min-height:0;}
+.embed .main{padding:4px 0 8px;}
+.embed .container{padding:0 4px;}
 
 .segmented{display:inline-flex;background:#eef0f4;border-radius:10px;padding:3px;gap:2px;}
 .segmented button{border:none;background:none;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--text-2);padding:7px 13px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:background .15s,color .15s,box-shadow .15s;}

@@ -6,7 +6,7 @@
 <title>Product Team · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
 <div class="page">
@@ -153,6 +153,8 @@
   const params = new URLSearchParams(location.search);
   const teamParam = params.get('team');
   const meetingParam = params.get('meeting');
+  const embed = params.get('embed') === '1';           // embedded as the admin-run (VIP) workspace
+  if (embed) document.documentElement.classList.add('embed');
   const onBehalf = !!(teamParam && me && me.role === 'admin');
   const effectiveTeamId = onBehalf ? teamParam : (me ? me.team_id : null);
   const meetings = await openMeetings();
@@ -171,8 +173,9 @@
     const tname = trow ? trow.name : 'team';
     document.getElementById('team-name').textContent = tname;
     titleEl.textContent = (meeting ? meeting.title : 'No meeting') + ' · editing as admin';
-    tabsEl.innerHTML = '<div class="pf-banner">Editing as <b>' + esc(tname) +
-      '</b> · admin — changes save to this team. <a href="admin.html">Back to admin</a></div>';
+    // Embedded VIP workspace: no banner (the admin dashboard already frames it).
+    tabsEl.innerHTML = embed ? '' : ('<div class="pf-banner">Editing as <b>' + esc(tname) +
+      '</b> · admin — changes save to this team. <a href="admin.html">Back to admin</a></div>');
     if (!meeting) return;
   } else {
     if (!meetings.length) {
@@ -381,6 +384,15 @@
   toggle.checked = !!initial.submitted;
   toggle.addEventListener('change', async function(){ reflect(); await saveNote({ submitted: toggle.checked }); });
   reflect();
+
+  /* ---------- Embedded workspace: report height so the admin dashboard can size the iframe ---------- */
+  if (embed) {
+    function postH(){ try { parent.postMessage({ mtHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {} }
+    window.addEventListener('load', postH);
+    document.addEventListener('input', postH);
+    document.addEventListener('click', function(){ setTimeout(postH, 300); });
+    setTimeout(postH, 400); setTimeout(postH, 1200);
+  }
 })();
 </script>
 </body>

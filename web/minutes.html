@@ -6,7 +6,7 @@
 <title>Minutes · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
 
@@ -101,6 +101,8 @@
   const { data: teams } = await supa.from('teams').select('*').order('name');
   const { data: notes } = await supa.from('notes').select('team_id, content').eq('meeting_id', meeting.id);
   const noteFor = (id) => (notes.find(n => n.team_id === id) || {}).content || '';
+  const isVip = meeting.model === 'admin';   // admin-run: single content block, no team sections
+  const vipTeamId = me.team_id;              // VIP content is stored under the admin's own team slot
 
   function fmtDate(v){
     if(!v) return '—';
@@ -116,12 +118,18 @@
     document.getElementById('d-date').textContent = fmtDate(date.value);
     document.getElementById('d-foot-org').textContent = org.value.trim();
 
-    let html = '<h3 class="sec">Team updates</h3>';
-    (teams || []).forEach(function(t){
-      const c = noteFor(t.id).trim();
-      html += '<h4 style="font-family:var(--font);margin:14px 0 4px;">' + esc(t.name) + '</h4>';
-      html += c ? md.render(c) : '<p style="color:#7a808f;">No updates this week.</p>';
-    });
+    let html;
+    if (isVip) {
+      const c = noteFor(vipTeamId).trim();
+      html = c ? md.render(c) : '<p style="color:#7a808f;">No content yet.</p>';
+    } else {
+      html = '<h3 class="sec">Team updates</h3>';
+      (teams || []).forEach(function(t){
+        const c = noteFor(t.id).trim();
+        html += '<h4 style="font-family:var(--font);margin:14px 0 4px;">' + esc(t.name) + '</h4>';
+        html += c ? md.render(c) : '<p style="color:#7a808f;">No updates this week.</p>';
+      });
+    }
     html += '<h3 class="sec">Decisions</h3>';
     const lines = decisionLines();
     html += lines.length
@@ -132,6 +140,13 @@
 
   // Markdown snapshot stored for History (rendered there via markdown-it).
   function minutesMarkdown(){
+    if (isVip) {
+      const out = ['# ' + (title.value || 'Meeting Minutes'), ''];
+      if (org.value) out.push('**Organization:** ' + org.value);
+      out.push('**Date:** ' + (date.value || ''), '', (noteFor(vipTeamId).trim() || '_No content_'),
+        '', '## Decisions', '', (dec.value.trim() || '_None recorded_'));
+      return out.join('\n');
+    }
     return buildMinutesMarkdown({
       org: org.value, title: title.value, date: date.value,
       teams: (teams || []).map(t => ({ team: t.name, notes: noteFor(t.id) })),
