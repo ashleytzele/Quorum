@@ -6,11 +6,12 @@
 <title>Present · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=10">
 <style>
   /* Rendered submission content on slides, inheriting the slide's light-on-dark text */
   .pre-md { text-align:left; font-size:2.5vmin; line-height:1.5; max-width:74vw; margin:2.4vmin auto 0; }
-  .pre-md h1,.pre-md h2,.pre-md h3 { margin:.5em 0 .3em; }
+  .pre-md h1,.pre-md h2,.pre-md h3 { margin:.5em 0 .3em; font-weight:700; letter-spacing:-.01em; }
+  .pre-md h1 { font-size:3.7vmin; } .pre-md h2 { font-size:3vmin; } .pre-md h3 { font-size:2.6vmin; }
   .pre-md ul,.pre-md ol { padding-left:1.3em; margin:.3em 0; }
   .pre-md li { margin:.2em 0; }
   .pre-md hr { border:none; border-top:1px solid rgba(255,255,255,.25); margin:.8em 0; }
@@ -200,7 +201,7 @@
       i = Math.max(0, Math.min(total - 1, n));
       slides.forEach((sec, idx) => sec.classList.toggle('is-active', idx === i));
       counter.textContent = pad(i + 1) + ' / ' + pad(total);
-      progress.style.width = ((i + 1) / total * 100) + '%';
+      progress.style.transform = 'scaleX(' + ((i + 1) / total) + ')';
     }
     const next = () => show(i + 1), prev = () => show(i - 1);
     function toggleFs(){
