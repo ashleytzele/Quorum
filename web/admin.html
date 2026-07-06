@@ -6,7 +6,7 @@
 <title>Admin · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 <div class="page">
@@ -301,10 +301,10 @@
     const preCell = n.submitted
       ? '<span class="notes-yes">' + CHECK + 'Submitted</span>'
       : (hasPre ? '<span class="notes-yes">' + CHECK + 'Draft</span>' : '<span class="notes-no">— None</span>');
-    // Notes = the meeting notes that feed the minutes.
-    const notesCell = hasNotes
-      ? '<span class="notes-yes">' + CHECK + 'Notes</span>'
-      : '<span class="notes-no">— No notes</span>';
+    // Notes = the meeting notes that feed the minutes, with their own submission status.
+    const notesCell = n.notes_submitted
+      ? '<span class="notes-yes">' + CHECK + 'Submitted</span>'
+      : (hasNotes ? '<span class="notes-yes">' + CHECK + 'Draft</span>' : '<span class="notes-no">— No notes</span>');
     const tr = document.createElement('tr');
     tr.className = 'clickable';
     tr.dataset.teamId = t.id;

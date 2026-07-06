@@ -6,7 +6,7 @@
 <title>Product Team · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 <div class="page">
@@ -137,6 +137,16 @@
             <div class="md" id="notes-preview"></div>
           </div>
         </div>
+        <div class="card-foot">
+          <span class="foot-label">Submission status</span>
+          <div style="display:flex;align-items:center;gap:13px;">
+            <span class="pill pill-muted" id="notes-submit-status">Draft</span>
+            <label class="switch" title="Mark meeting notes as submitted">
+              <input type="checkbox" id="notes-submit-toggle">
+              <span class="track"></span>
+            </label>
+          </div>
+        </div>
       </section>
     </div>
   </main>
@@ -248,9 +258,9 @@
   }
 
   /* ---------- Load this team's note row (pre_note, content, submitted) ---------- */
-  const { data: noteRow } = await supa.from('notes').select('pre_note, content, submitted')
+  const { data: noteRow } = await supa.from('notes').select('pre_note, content, submitted, notes_submitted')
     .eq('meeting_id', meeting.id).eq('team_id', effectiveTeamId).maybeSingle();
-  const initial = noteRow || { pre_note: '', content: '', submitted: false };
+  const initial = noteRow || { pre_note: '', content: '', submitted: false, notes_submitted: false };
 
   async function saveNote(fields){
     await supa.from('notes').upsert(
@@ -387,6 +397,17 @@
   toggle.checked = !!initial.submitted;
   toggle.addEventListener('change', async function(){ reflect(); await saveNote({ submitted: toggle.checked }); });
   reflect();
+
+  /* ---------- Meeting-notes submit toggle (wired to notes.notes_submitted) ---------- */
+  var nToggle = document.getElementById('notes-submit-toggle');
+  var nStatus = document.getElementById('notes-submit-status');
+  function reflectNotes(){
+    if(nToggle.checked){ nStatus.textContent = 'Submitted'; nStatus.className = 'pill pill-ok'; }
+    else { nStatus.textContent = 'Draft'; nStatus.className = 'pill pill-muted'; }
+  }
+  nToggle.checked = !!initial.notes_submitted;
+  nToggle.addEventListener('change', async function(){ reflectNotes(); await saveNote({ notes_submitted: nToggle.checked }); });
+  reflectNotes();
 
   /* ---------- Embedded workspace: report height so the admin dashboard can size the iframe ---------- */
   if (embed) {
