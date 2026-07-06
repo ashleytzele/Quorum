@@ -21,14 +21,18 @@
       </div>
 
       <h1>Sign in to MeeTeam</h1>
-      <p class="sub">Enter your work email and we'll send you a secure login link — no password needed.</p>
+      <p class="sub">Enter your email and password. New here? Your account is created automatically — if you were invited to a team, you'll land right on it.</p>
 
       <form id="login-form" novalidate>
         <div class="field">
           <label class="label" for="email">Work email</label>
           <input class="input" type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" autofocus>
         </div>
-        <button class="btn btn-primary btn-lg btn-block" type="submit">Send me a login link</button>
+        <div class="field">
+          <label class="label" for="password">Password</label>
+          <input class="input" type="password" id="password" name="password" placeholder="At least 6 characters" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary btn-lg btn-block" type="submit">Sign in / Create account</button>
       </form>
 
       <p class="auth-msg" id="login-msg" role="status" aria-live="polite">We'll never share your email.</p>
@@ -37,7 +41,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="supa.js?v=2"></script>
-  <script src="auth.js"></script>
+  <script src="supa.js?v=3"></script>
+  <script src="auth.js?v=2"></script>
 </body>
 </html>

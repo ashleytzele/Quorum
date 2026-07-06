@@ -10,6 +10,16 @@ async function currentProfile() {
     await supa.from('profiles').insert({ id: user.id });
     ({ data } = await supa.from('profiles').select('*, teams(name)').eq('id', user.id).maybeSingle());
   }
+  // Auto-join: if this user has no team yet and their email was invited to one, claim it.
+  if (data && !data.team_id && user.email) {
+    const email = user.email.toLowerCase();
+    const { data: inv } = await supa.from('team_invites').select('team_id').eq('email', email).maybeSingle();
+    if (inv && inv.team_id) {
+      await supa.from('profiles').update({ team_id: inv.team_id }).eq('id', user.id);
+      await supa.from('team_invites').update({ joined_at: new Date().toISOString() }).eq('email', email);
+      ({ data } = await supa.from('profiles').select('*, teams(name)').eq('id', user.id).maybeSingle());
+    }
+  }
   return data; // { id, team_id, role, teams: { name } }
 }
 

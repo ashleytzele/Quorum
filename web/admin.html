@@ -161,6 +161,14 @@
       <button class="btn btn-ghost" id="delete-team" type="button">Delete team</button>
     </div>
     <div>
+      <div class="subhead">Members</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input class="input" id="invite-emails" type="text" placeholder="Add people by email (space or comma separated)…" style="flex:1;">
+        <button class="btn btn-ghost" id="invite-add" type="button">Add</button>
+      </div>
+      <div class="stack" id="roster"></div>
+    </div>
+    <div>
       <div class="subhead">Submitted files</div>
       <div class="stack" id="detail-files"></div>
     </div>
@@ -174,7 +182,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <script src="config.js"></script>
-<script src="supa.js?v=2"></script>
+<script src="supa.js?v=3"></script>
 <script>
 (async function(){
   await requireAuth();
@@ -328,6 +336,7 @@
   let currentTeam = null;
   async function openTeam(t, color){
     currentTeam = t;
+    renderRoster(t.id);
     const n = noteOf(t.id);
     const files = filesOf(t.id);
     dBadge.textContent = initials(t.name); dBadge.style.background = color;
@@ -378,6 +387,43 @@
     if (error) { alert('Could not delete — the team may still have members or submissions.\n\n' + error.message); return; }
     location.reload();
   });
+
+  /* ---------- Members (invite by email → auto-join on login) ---------- */
+  async function renderRoster(teamId){
+    const el = document.getElementById('roster');
+    el.innerHTML = '<div class="muted-note">Loading…</div>';
+    const { data: invs } = await supa.from('team_invites').select('*').eq('team_id', teamId).order('created_at');
+    if (!invs || !invs.length){ el.innerHTML = '<div class="muted-note">No members yet — add people by email above.</div>'; return; }
+    el.innerHTML = invs.map(function(iv){
+      const status = iv.joined_at ? '<span class="notes-yes">' + CHECK + 'Joined</span>' : '<span class="notes-no">Pending</span>';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px solid var(--border);">' +
+        '<span>' + esc(iv.email) + '</span>' +
+        '<span style="display:flex;align-items:center;gap:14px;">' + status +
+        '<button class="roster-remove" data-id="' + iv.id + '" type="button" style="background:none;border:none;color:var(--text-3);cursor:pointer;font:inherit;">Remove</button></span></div>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('.roster-remove'), function(b){
+      b.addEventListener('click', function(){ removeMember(b.dataset.id, teamId); });
+    });
+  }
+  async function addInvites(teamId){
+    const input = document.getElementById('invite-emails');
+    const emails = input.value.split(/[\s,;]+/).map(function(s){ return s.trim().toLowerCase(); })
+      .filter(function(s){ return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s); });
+    if (!emails.length){ alert('Enter one or more valid email addresses.'); return; }
+    const rows = emails.map(function(e){ return { email: e, team_id: teamId }; });
+    const { error } = await supa.from('team_invites').upsert(rows, { onConflict: 'email' });
+    if (error){ alert('Could not add: ' + error.message); return; }
+    input.value = '';
+    renderRoster(teamId);
+  }
+  async function removeMember(inviteId, teamId){
+    const { data: iv } = await supa.from('team_invites').select('user_id').eq('id', inviteId).maybeSingle();
+    if (iv && iv.user_id) await supa.from('profiles').update({ team_id: null }).eq('id', iv.user_id);
+    await supa.from('team_invites').delete().eq('id', inviteId);
+    renderRoster(teamId);
+  }
+  document.getElementById('invite-add').addEventListener('click', function(){ if (currentTeam) addInvites(currentTeam.id); });
+  document.getElementById('invite-emails').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (currentTeam) addInvites(currentTeam.id); } });
 
   /* ---------- Actions ---------- */
   // Pin Present/Export to the meeting currently open on this page (?meeting=<id>),
