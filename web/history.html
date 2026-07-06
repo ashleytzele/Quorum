@@ -6,7 +6,7 @@
 <title>Team history · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=7">
+<link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 <div class="page">
@@ -62,10 +62,6 @@
                   </span>
                   <span class="card-sub" id="detail-meeting-label">—</span>
                 </div>
-                <button class="btn btn-ghost no-print" id="delete-meeting" type="button" style="display:none;">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
-                  Delete
-                </button>
               </div>
               <div class="card-body"><div class="md" id="history-notes"></div></div>
             </section>
@@ -165,10 +161,8 @@
     return;
   }
 
-  let currentIdx = 0;
   async function select(idx){
     const m = meetings[idx];
-    currentIdx = idx;
     Array.prototype.forEach.call(listEl.children, (li, k) => li.classList.toggle('active', k === idx));
     labelEl.textContent = m.title + (m.meeting_date ? ' · ' + m.meeting_date : '');
     const mNotes = (allNotes || []).filter(n => n.meeting_id === m.id);
@@ -217,8 +211,28 @@
       '<div class="hmeta"><span>' + subsOfMeeting(m.id).length + ' files</span><span>' +
       (m.minutes_final ? 'minutes' : 'no minutes') + '</span></div>';
     li.addEventListener('click', () => select(idx));
+    if (isAdmin) {
+      const del = document.createElement('button');
+      del.className = 'hdel'; del.type = 'button'; del.title = 'Delete meeting';
+      del.setAttribute('aria-label', 'Delete ' + m.title);
+      del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>';
+      del.addEventListener('click', function(e){ e.stopPropagation(); deleteMeeting(m); });
+      li.appendChild(del);
+    }
     listEl.appendChild(li);
   });
+
+  // Delete a past meeting + its notes/files (admin only). Triggered by each item's icon.
+  async function deleteMeeting(m){
+    if (!confirm('Delete "' + m.title + '" from history?\n\nThis permanently removes its notes and files and cannot be undone.')) return;
+    const paths = subsOfMeeting(m.id).filter(s => s.file_path).map(s => s.file_path);
+    if (paths.length) await supa.storage.from('submissions').remove(paths);
+    await supa.from('submissions').delete().eq('meeting_id', m.id);
+    await supa.from('notes').delete().eq('meeting_id', m.id);
+    const { error } = await supa.from('meetings').delete().eq('id', m.id);
+    if (error) { alert('Could not delete: ' + error.message); return; }
+    location.reload();
+  }
 
   select(0);
 
@@ -234,23 +248,6 @@
       if (match) shown++;
     });
     emptyEl.style.display = shown ? 'none' : '';
-  });
-
-  /* ---------- Delete a past meeting (admin only) ---------- */
-  const delBtn = document.getElementById('delete-meeting');
-  if (isAdmin) delBtn.style.display = '';
-  delBtn.addEventListener('click', async function(){
-    const m = meetings[currentIdx];
-    if (!m) return;
-    if (!confirm('Delete "' + m.title + '" from history?\n\nThis permanently removes its notes and files and cannot be undone.')) return;
-    delBtn.disabled = true;
-    const paths = subsOfMeeting(m.id).filter(s => s.file_path).map(s => s.file_path);
-    if (paths.length) await supa.storage.from('submissions').remove(paths);
-    await supa.from('submissions').delete().eq('meeting_id', m.id);
-    await supa.from('notes').delete().eq('meeting_id', m.id);
-    const { error } = await supa.from('meetings').delete().eq('id', m.id);
-    if (error) { alert('Could not delete: ' + error.message); delBtn.disabled = false; return; }
-    location.reload();
   });
 
   document.getElementById('save-pdf').addEventListener('click', function(){
