@@ -35,3 +35,30 @@ Branch: feat/meeting-models
   session work (multi-meeting tabs, links, etc.). Cache-version skew: styles.css ?v=3 on admin/index/dev-login/route,
   ?v=2 on team/present/minutes/history. Reconcile at end (uniform bump + commit remaining working-tree work).
   Per-task commit review consolidated into final whole-branch review (commit boundaries not clean).
+- Task 5 (team.html: admin edits any team via ?meeting=&team=; effectiveTeamId + banner + tab suppression):
+  complete (controller-implemented; caught+fixed a sed over-replacement of the effectiveTeamId definition).
+  CDP-verified: admin edits R&D (non-own) -> banner "Editing as R&D · admin", team-name=R&D, no tabs,
+  pre-note saved to R&D. Uniform styles.css?v=4. Commit 8556326.
+- Task 6 (regression + visibility): normal member path renders tabs + no banner (CDP OK). VIP-hidden
+  enforced by read-meetings policy qual = (model<>'admin' OR is_admin()). DB restored: all 10 meetings model='team'.
+- Commits on branch feat/meeting-models: 784f6cb, bbfff6e, 8556326, ff3668f. Working tree clean.
+
+- Final whole-branch review (opus): 1 Critical + 3 Minor. Critical = stored XSS via unescaped link url
+  in href (admin drawer/history/present); member->admin through the normal link UI. FIXED commit 4dfcabc
+  (esc(url) at all 3 render sites + team.html esc now escapes "). CDP-verified: payload inert, no attr
+  injection, no script exec. Minor #2 (team.html esc missing ") fixed same commit. Minor #3 (model badge/
+  edit-btn reflect page-load model; needs reload) and #4 (single-threaded dev server) accepted as documented.
+
+## Status: meeting-models tasks 1-6 COMPLETE + reviewed + XSS fixed. Branch feat/meeting-models: 5 commits.
+## FOLLOW-UP (new user requirement) — admin-run (VIP) single inline workspace: COMPLETE (commit 85270c4).
+   - admin.html: model='admin' -> hide Teams card, embed team.html?embed=1 (iframe, postMessage auto-height),
+     keep Present/Export. team.html: embed mode strips chrome + banner, posts height. Content stored under
+     admin's own team slot (no schema change). present.html + minutes.html: VIP branch drops team badges/
+     headings, renders single content.
+   - CDP-verified: teams hidden + workspace embedded; in-frame edit saves to VIP slot; present='Meeting
+     content' no badges; minutes no 'Team updates'; embed mode hides topbar/grid-head/banner; non-VIP
+     present/minutes regress clean. DB restored (cleaned __CDP_EMB__; left user's real 'New meeting').
+   - Cache: styles.css?v=5 uniform across pages.
+
+## Status: meeting-models (tasks 1-6) + XSS fix + admin-run VIP workspace all COMPLETE & CDP-verified.
+## Branch feat/meeting-models: 6 commits, working tree clean. Ready for finishing-a-development-branch.
