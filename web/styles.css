@@ -310,6 +310,7 @@ body.present-body{background:#0e1018;overflow:hidden;}
 .mt-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--text-3);box-sizing:border-box;flex:none;}
 .mt-dot.submitted{background:var(--ok);border-color:var(--ok);}
 .mt-flag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.03em;padding:1px 6px;border-radius:6px;background:var(--accent-100);color:var(--accent-700);vertical-align:middle;}
+.mt-flag-team{background:#eef0f4;color:var(--text-2);}
 .pf-banner{background:var(--accent-50);color:var(--accent-700);border:1px solid var(--accent-100);border-radius:var(--radius-sm);padding:10px 14px;font-size:13.5px;margin-bottom:22px;}
 .pf-banner a{margin-left:8px;font-weight:600;}
 /* Embedded workspace (admin-run VIP meeting inside admin.html): strip page chrome */
