@@ -6,7 +6,7 @@
 <title>Product Team · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 <div class="page">
@@ -40,6 +40,7 @@
           <div class="page-sub">Prepare what you're presenting, then capture notes for the minutes.</div>
         </div>
       </div>
+      <div class="meeting-tabs" id="meeting-tabs"></div>
 
       <!-- ============ SECTION 1 · Pre-meeting submission ============ -->
       <section class="card" style="margin-bottom:22px;">
@@ -87,11 +88,17 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
               </div>
               <div class="dztitle">Drop documents or pictures here</div>
-              <div class="dzsub">or <span class="browse">browse your device</span> · PDF, DOCX, PNG, JPG</div>
+              <div class="dzsub">or <span class="browse">browse your device</span> · PDF, DOCX, PPTX, HTML, PNG, JPG</div>
             </div>
             <input type="file" id="file-input" multiple hidden>
 
-            <div class="subhead" style="margin-top:20px;">Uploaded files <span id="file-count" style="color:var(--text-3);">(0)</span></div>
+            <div class="link-add" style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+              <input class="input" type="url" id="link-url" placeholder="…or paste a link  (https://…)" style="flex:2;min-width:200px;">
+              <input class="input" type="text" id="link-label" placeholder="Label (optional)" style="flex:1;min-width:130px;">
+              <button class="btn btn-ghost" id="link-add-btn" type="button">Add link</button>
+            </div>
+
+            <div class="subhead" style="margin-top:20px;">Files &amp; links <span id="file-count" style="color:var(--text-3);">(0)</span></div>
             <ul class="filelist" id="file-list"></ul>
           </div>
         </div>
@@ -137,19 +144,64 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
-<script src="supa.js"></script>
-<script src="lib.js"></script>
+<script src="supa.js?v=2"></script>
+<script src="lib.js?v=2"></script>
 <script>
 (async function(){
   await requireAuth();
   const me = await currentProfile();
-  const meeting = await activeMeeting();
+  const params = new URLSearchParams(location.search);
+  const teamParam = params.get('team');
+  const meetingParam = params.get('meeting');
+  const onBehalf = !!(teamParam && me && me.role === 'admin');
+  const effectiveTeamId = onBehalf ? teamParam : (me ? me.team_id : null);
+  const meetings = await openMeetings();
+  const meeting = meetingParam
+    ? ((await supa.from('meetings').select('*').eq('id', meetingParam).maybeSingle()).data || await selectedMeeting(meetings))
+    : await selectedMeeting(meetings);
   if (me && me.teams) document.getElementById('team-name').textContent = me.teams.name;
   document.getElementById('signout-link').addEventListener('click', function(e){ e.preventDefault(); signOut(); });
 
   const titleEl = document.getElementById('meeting-title');
-  if (!meeting) { titleEl.textContent = 'No active meeting'; return; }
-  titleEl.textContent = meeting.title + (meeting.meeting_date ? ' · ' + meeting.meeting_date : '');
+  const tabsEl = document.getElementById('meeting-tabs');
+
+  if (onBehalf) {
+    // Admin editing on behalf of a team: pin to one meeting+team, show a banner, no tab switcher.
+    const { data: trow } = await supa.from('teams').select('name').eq('id', effectiveTeamId).maybeSingle();
+    const tname = trow ? trow.name : 'team';
+    document.getElementById('team-name').textContent = tname;
+    titleEl.textContent = (meeting ? meeting.title : 'No meeting') + ' · editing as admin';
+    tabsEl.innerHTML = '<div class="pf-banner">Editing as <b>' + esc(tname) +
+      '</b> · admin — changes save to this team. <a href="admin.html">Back to admin</a></div>';
+    if (!meeting) return;
+  } else {
+    if (!meetings.length) {
+      tabsEl.innerHTML = '<div class="muted-note">No meetings yet — your admin hasn\'t opened one.</div>';
+      titleEl.textContent = 'No active meeting'; return;
+    }
+    // This team's submission status for every open meeting → fills each tab's dot.
+    const { data: statusRows } = await supa.from('notes').select('meeting_id, submitted')
+      .eq('team_id', effectiveTeamId).in('meeting_id', meetings.map(m => m.id));
+    const submittedOf = (mid) => { const r = (statusRows || []).find(x => x.meeting_id === mid); return !!(r && r.submitted); };
+    function fmtTab(v){
+      if (!v) return 'No date';
+      const d = new Date(v + 'T00:00');
+      return isNaN(d) ? v : d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    }
+    tabsEl.innerHTML = meetings.map(function(m){
+      const sub = submittedOf(m.id);
+      const active = m.id === meeting.id ? ' active' : '';
+      const subLabel = (m.title ? esc(m.title) + ' · ' : '') + (sub ? 'Submitted' : 'Draft');
+      return '<button type="button" class="meeting-tab' + active + '" data-id="' + m.id + '" title="' + esc(m.title || '') + '">' +
+        '<span class="mt-dot' + (sub ? ' submitted' : '') + '"></span>' +
+        '<span class="mt-body"><span class="mt-date">' + esc(fmtTab(m.meeting_date)) + '</span>' +
+        '<span class="mt-sub">' + subLabel + '</span></span></button>';
+    }).join('');
+    Array.prototype.forEach.call(tabsEl.querySelectorAll('.meeting-tab'), function(btn){
+      btn.addEventListener('click', function(){ setSelectedMeeting(btn.dataset.id); location.reload(); });
+    });
+    titleEl.textContent = meeting.title + (meeting.meeting_date ? ' · ' + meeting.meeting_date : '');
+  }
 
   /* ---------- Markdown renderer (from the design) ---------- */
   function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -191,12 +243,12 @@
 
   /* ---------- Load this team's note row (pre_note, content, submitted) ---------- */
   const { data: noteRow } = await supa.from('notes').select('pre_note, content, submitted')
-    .eq('meeting_id', meeting.id).eq('team_id', me.team_id).maybeSingle();
+    .eq('meeting_id', meeting.id).eq('team_id', effectiveTeamId).maybeSingle();
   const initial = noteRow || { pre_note: '', content: '', submitted: false };
 
   async function saveNote(fields){
     await supa.from('notes').upsert(
-      Object.assign({ meeting_id: meeting.id, team_id: me.team_id, updated_at: new Date().toISOString() }, fields),
+      Object.assign({ meeting_id: meeting.id, team_id: effectiveTeamId, updated_at: new Date().toISOString() }, fields),
       { onConflict: 'meeting_id,team_id' });
   }
 
@@ -239,20 +291,30 @@
   var countEl = document.getElementById('file-count');
   var ICON_DOC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
   var ICON_IMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 5-5 4 4 2-2 3 3"/></svg>';
+  var ICON_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>';
   function isImage(name){ return /\.(png|jpe?g|gif|webp|svg|heic|bmp)$/i.test(name); }
   function updateCount(){
     var n = list.querySelectorAll('.file-item').length;
     countEl.textContent = '(' + n + ')';
     var empty = list.querySelector('.empty');
-    if(n === 0 && !empty){ var li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No files yet — add documents or pictures above.'; list.appendChild(li); }
+    if(n === 0 && !empty){ var li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Nothing yet — add files or a link above.'; list.appendChild(li); }
     else if(n > 0 && empty){ empty.remove(); }
   }
   function addFileRow(f){
+    var isLink = !!f.url;
     var li = document.createElement('li'); li.className = 'file-item';
-    li.innerHTML = '<span class="fico">' + (isImage(f.file_name) ? ICON_IMG : ICON_DOC) + '</span><span class="fmeta"><span class="fname"></span><span class="fsize"></span></span><button class="file-remove" type="button">Remove</button>';
-    li.querySelector('.fname').textContent = f.file_name;
+    var icon = isLink ? ICON_LINK : (isImage(f.file_name) ? ICON_IMG : ICON_DOC);
+    li.innerHTML = '<span class="fico">' + icon + '</span><span class="fmeta"><span class="fname"></span><span class="fsize"></span></span><button class="file-remove" type="button">Remove</button>';
+    var nameEl = li.querySelector('.fname');
+    if (isLink){
+      var a = document.createElement('a'); a.href = f.url; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = f.file_name || f.url; nameEl.appendChild(a);
+      li.querySelector('.fsize').textContent = 'Link';
+    } else {
+      nameEl.textContent = f.file_name;
+    }
     li.querySelector('.file-remove').addEventListener('click', async function(){
-      await supa.storage.from('submissions').remove([f.file_path]);
+      if (!isLink) await supa.storage.from('submissions').remove([f.file_path]);
       await supa.from('submissions').delete().eq('id', f.id);
       li.remove(); updateCount();
     });
@@ -263,11 +325,11 @@
     for (var k = 0; k < files.length; k++){
       var file = files[k];
       if(!isAccepted(file.name)){ rejected++; continue; }
-      var path = meeting.id + '/' + me.team_id + '/' + Date.now() + '-' + file.name;
+      var path = meeting.id + '/' + effectiveTeamId + '/' + Date.now() + '-' + file.name;
       var up = await supa.storage.from('submissions').upload(path, file);
       if(up.error){ alert(up.error.message); continue; }
       var ins = await supa.from('submissions').insert({
-        meeting_id: meeting.id, team_id: me.team_id, file_path: path, file_name: file.name, mime: file.type
+        meeting_id: meeting.id, team_id: effectiveTeamId, file_path: path, file_name: file.name, mime: file.type
       }).select().single();
       if(ins.data) addFileRow(ins.data);
     }
@@ -281,9 +343,26 @@
   zone.addEventListener('dragleave', function(e){ if(zone.contains(e.relatedTarget)) return; zone.classList.remove('drag'); });
   zone.addEventListener('drop', function(e){ e.preventDefault(); zone.classList.remove('drag'); if(e.dataTransfer && e.dataTransfer.files) uploadFiles(e.dataTransfer.files); });
 
+  /* ---------- Add a shared link (stored as a submission with a url, no file) ---------- */
+  var linkUrl = document.getElementById('link-url');
+  var linkLabel = document.getElementById('link-label');
+  async function addLink(){
+    var url = linkUrl.value.trim();
+    if(!url) return;
+    if(!/^https?:\/\//i.test(url)){ alert('Please enter a full URL starting with http:// or https://'); return; }
+    var ins = await supa.from('submissions').insert({
+      meeting_id: meeting.id, team_id: effectiveTeamId, url: url, file_name: linkLabel.value.trim() || url, mime: 'link'
+    }).select().single();
+    if(ins.error){ alert(ins.error.message); return; }
+    addFileRow(ins.data); updateCount();
+    linkUrl.value = ''; linkLabel.value = '';
+  }
+  document.getElementById('link-add-btn').addEventListener('click', addLink);
+  linkUrl.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); addLink(); } });
+
   // load existing files
   const { data: subs } = await supa.from('submissions').select('*')
-    .eq('meeting_id', meeting.id).eq('team_id', me.team_id).order('created_at');
+    .eq('meeting_id', meeting.id).eq('team_id', effectiveTeamId).order('created_at');
   (subs || []).forEach(addFileRow);
   updateCount();
 
@@ -293,6 +372,11 @@
   function reflect(){
     if(toggle.checked){ subStatus.textContent = 'Submitted'; subStatus.className = 'pill pill-ok'; }
     else { subStatus.textContent = 'Draft'; subStatus.className = 'pill pill-muted'; }
+    // keep the active meeting tab's dot + label in sync without a reload
+    var dot = document.querySelector('.meeting-tab.active .mt-dot');
+    var sub = document.querySelector('.meeting-tab.active .mt-sub');
+    if (dot) dot.classList.toggle('submitted', toggle.checked);
+    if (sub) sub.textContent = (meeting.title ? meeting.title + ' · ' : '') + (toggle.checked ? 'Submitted' : 'Draft');
   }
   toggle.checked = !!initial.submitted;
   toggle.addEventListener('change', async function(){ reflect(); await saveNote({ submitted: toggle.checked }); });

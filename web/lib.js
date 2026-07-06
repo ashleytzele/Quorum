@@ -1,6 +1,7 @@
 'use strict';
 
-const DOC_EXT = ['md', 'markdown', 'txt', 'pdf', 'doc', 'docx', 'rtf', 'odt'];
+const DOC_EXT = ['md', 'markdown', 'txt', 'pdf', 'doc', 'docx', 'rtf', 'odt',
+  'ppt', 'pptx', 'key', 'html', 'htm'];
 const IMG_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
 
 function extOf(name) {

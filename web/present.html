@@ -6,7 +6,7 @@
 <title>Present · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=4">
 <style>
   /* Rendered submission content on slides, inheriting the slide's light-on-dark text */
   .pre-md { text-align:left; font-size:2.5vmin; line-height:1.5; max-width:74vw; margin:2.4vmin auto 0; }
@@ -18,9 +18,25 @@
   .present-media { max-width:82vw; max-height:70vh; object-fit:contain; border-radius:1vmin; }
   .present-pdf { width:82vw; height:74vh; border:none; border-radius:1vmin; background:#fff; }
   .present-link { font-size:2.6vmin; text-decoration:underline; color:inherit; }
+  /* Pre-flight "what to present" checklist */
+  #preflight{position:fixed;inset:0;display:grid;place-items:center;padding:5vmin;overflow:auto;z-index:50;}
+  .pf-card{background:#fff;color:#161922;border-radius:16px;max-width:620px;width:100%;padding:26px 30px;max-height:86vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.45);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;}
+  .pf-title{font-size:20px;font-weight:700;margin:0 0 3px;}
+  .pf-sub{color:#565d6e;font-size:14px;margin:0 0 16px;}
+  .pf-team{font-weight:600;margin:15px 0 4px;font-size:13.5px;color:#3b4dd8;}
+  .pf-item{display:flex;align-items:center;gap:11px;padding:6px 10px;border-radius:8px;}
+  .pf-item:hover{background:#f5f6f9;}
+  .pf-item input{width:16px;height:16px;flex:none;accent-color:#3b4dd8;}
+  .pf-item label{font-size:14px;cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pf-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px;}
+  .pf-select-all{font-size:13px;color:#3b4dd8;background:none;border:none;cursor:pointer;font-family:inherit;}
+  .pf-start{background:#3b4dd8;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;}
+  .pf-start:hover{background:#3140bd;}
 </style>
 </head>
 <body class="present-body">
+
+<div id="preflight"></div>
 
 <div class="reveal" id="deck">
   <div class="topline">
@@ -54,13 +70,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <script src="config.js"></script>
-<script src="supa.js"></script>
-<script src="lib.js"></script>
+<script src="supa.js?v=2"></script>
+<script src="lib.js?v=2"></script>
 <script>
 (async function(){
   await requireAuth();
   const md = window.markdownit({ html: false, linkify: true, breaks: true });
-  const meeting = await activeMeeting();
+  const mParam = new URLSearchParams(location.search).get('meeting');
+  const meeting = mParam
+    ? ((await supa.from('meetings').select('*').eq('id', mParam).maybeSingle()).data || await selectedMeeting())
+    : await selectedMeeting();
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   const PALETTE = ['#3b4dd8','#0f8a5f','#b5850b','#8a4fd0','#c2410c','#0891b2'];
   const initials = (n) => n.trim().split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase();
@@ -69,92 +88,136 @@
     color + ';color:#fff;font-size:1.4vmin;">' + initials(name) + '</span> ' + esc(name);
   const slide = (inner) => '<section><div class="inner">' + inner + '</div></section>';
 
-  const parts = [];
-
-  if (!meeting) {
-    parts.push(slide('<div class="s-title">No active meeting</div>'));
-  } else {
-    // Title slide
-    parts.push(slide(
-      '<div class="eyebrow">' + esc(meeting.org || '') + ' · ' + esc(meeting.title || '') + '</div>' +
-      '<div class="s-title">' + esc(meeting.title || 'Meeting') + '</div>' +
-      '<div class="s-sub">' + esc(meeting.meeting_date || '') + '</div>'
-    ));
-
+  /* ---------- Collect selectable groups (each team's pre-note + files) ---------- */
+  const groups = [];
+  if (meeting) {
     const { data: teams } = await supa.from('teams').select('*').order('name');
     const { data: subs } = await supa.from('submissions').select('*').eq('meeting_id', meeting.id);
     const { data: notes } = await supa.from('notes').select('team_id, pre_note').eq('meeting_id', meeting.id);
     const preOf = (id) => (notes.find(n => n.team_id === id) || {}).pre_note || '';
-
     let idx = 0;
     for (const t of (teams || [])) {
       const color = PALETTE[idx % PALETTE.length]; idx++;
-      const mine = subs.filter(s => s.team_id === t.id);
+      const files = subs.filter(s => s.team_id === t.id);
       const pre = preOf(t.id);
-      if (!mine.length && !pre.trim()) continue;
+      if (!files.length && !pre.trim()) continue;
+      groups.push({ team: t, color: color, pre: pre, files: files });
+    }
+  }
 
-      // team update slide (pre-meeting note)
+  /* ---------- Pre-flight checklist: choose what to present ---------- */
+  const pf = document.getElementById('preflight');
+  const isChecked = (key) => { const el = document.getElementById('pf-' + key); return !el || el.checked; };
+  function pfItem(key, label){
+    return '<div class="pf-item"><input type="checkbox" id="pf-' + key + '" checked>' +
+      '<label for="pf-' + key + '">' + label + '</label></div>';
+  }
+  function renderPreflight(){
+    if (!meeting){ pf.innerHTML = '<div class="pf-card"><div class="pf-title">No active meeting</div></div>'; return; }
+    if (!groups.length){
+      pf.innerHTML = '<div class="pf-card"><div class="pf-title">Nothing to present yet</div>' +
+        '<div class="pf-sub">No team has submitted notes or files for this meeting.</div>' +
+        '<div class="pf-actions"><span></span><button class="pf-start" id="pf-start" type="button">Open empty deck ▶</button></div></div>';
+      document.getElementById('pf-start').addEventListener('click', start);
+      return;
+    }
+    let html = '<div class="pf-card"><div class="pf-title">What to present</div>' +
+      '<div class="pf-sub">' + esc(meeting.title || 'Meeting') + (meeting.meeting_date ? ' · ' + esc(meeting.meeting_date) : '') + '</div>';
+    groups.forEach(function(g, gi){
+      html += '<div class="pf-team">' + esc(g.team.name) + '</div>';
+      if (g.pre.trim()) html += pfItem(gi + '-pre', 'Pre-meeting note');
+      g.files.forEach(function(f, fi){ html += pfItem(gi + '-f' + fi, esc(f.file_name) + (f.url ? ' <span style="color:#8a90a1;">· link</span>' : '')); });
+    });
+    html += '<div class="pf-actions"><button class="pf-select-all" id="pf-toggle-all" type="button">Deselect all</button>' +
+      '<button class="pf-start" id="pf-start" type="button">Start presentation ▶</button></div></div>';
+    pf.innerHTML = html;
+    document.getElementById('pf-start').addEventListener('click', start);
+    const toggleAll = document.getElementById('pf-toggle-all');
+    toggleAll.addEventListener('click', function(){
+      const boxes = pf.querySelectorAll('input[type=checkbox]');
+      const anyChecked = Array.prototype.some.call(boxes, b => b.checked);
+      Array.prototype.forEach.call(boxes, b => { b.checked = !anyChecked; });
+      toggleAll.textContent = anyChecked ? 'Select all' : 'Deselect all';
+    });
+  }
+
+  /* ---------- Build the deck from the selection, then run ---------- */
+  async function start(){
+    const parts = [];
+    if (!meeting){
+      parts.push(slide('<div class="s-title">No active meeting</div>'));
+    } else {
       parts.push(slide(
-        '<div class="eyebrow">' + badge(t.name, color) + '</div>' +
-        '<h2 class="s-head">' + esc(t.name) + '</h2>' +
-        (pre.trim() ? '<div class="pre-md">' + md.render(pre) + '</div>'
-                    : '<div class="pre-md"><em>No written update.</em></div>')
+        '<div class="eyebrow">' + esc(meeting.org || '') + ' · ' + esc(meeting.title || '') + '</div>' +
+        '<div class="s-title">' + esc(meeting.title || 'Meeting') + '</div>' +
+        '<div class="s-sub">' + esc(meeting.meeting_date || '') + '</div>'
       ));
-
-      // one slide per file
-      for (const f of mine) {
-        const kind = classifyFile(f.file_name);
-        const url = await signedUrl(f.file_path);
-        const head = '<div class="eyebrow">' + badge(t.name, color) + ' · ' + esc(f.file_name) + '</div>';
-        if (kind === 'image') {
-          parts.push(slide(head + '<img class="present-media" src="' + url + '" alt="' + esc(f.file_name) + '">'));
-        } else if (kind === 'pdf') {
-          parts.push(slide(head + '<embed class="present-pdf" src="' + url + '" type="application/pdf">'));
-        } else if (kind === 'markdown') {
-          const text = await (await fetch(url)).text();
-          parts.push(slide(head + '<div class="pre-md">' + md.render(text) + '</div>'));
-        } else {
-          parts.push(slide(head + '<a class="present-link" href="' + url + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>'));
+      for (let gi = 0; gi < groups.length; gi++){
+        const g = groups[gi];
+        const includePre = g.pre.trim() && isChecked(gi + '-pre');
+        const includedFiles = g.files.filter((f, fi) => isChecked(gi + '-f' + fi));
+        if (!includePre && !includedFiles.length) continue;
+        if (includePre){
+          parts.push(slide(
+            '<div class="eyebrow">' + badge(g.team.name, g.color) + '</div>' +
+            '<h2 class="s-head">' + esc(g.team.name) + '</h2>' +
+            '<div class="pre-md">' + md.render(g.pre) + '</div>'
+          ));
+        }
+        for (const f of includedFiles){
+          const head = '<div class="eyebrow">' + badge(g.team.name, g.color) + ' · ' + esc(f.file_name) + '</div>';
+          if (f.url){ parts.push(slide(head + '<a class="present-link" href="' + f.url + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>')); continue; }
+          const kind = classifyFile(f.file_name);
+          const url = await signedUrl(f.file_path);
+          if (kind === 'image') parts.push(slide(head + '<img class="present-media" src="' + url + '" alt="' + esc(f.file_name) + '">'));
+          else if (kind === 'pdf') parts.push(slide(head + '<embed class="present-pdf" src="' + url + '" type="application/pdf">'));
+          else if (kind === 'markdown'){ const text = await (await fetch(url)).text(); parts.push(slide(head + '<div class="pre-md">' + md.render(text) + '</div>')); }
+          else parts.push(slide(head + '<a class="present-link" href="' + url + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>'));
         }
       }
+      if (parts.length === 1) parts.push(slide('<div class="s-sub">Nothing selected to present.</div>'));
     }
-    if (parts.length === 1) parts.push(slide('<div class="s-sub">No submissions yet.</div>'));
+    document.getElementById('slides').innerHTML = parts.join('');
+    pf.style.display = 'none';
+    setupNav();
   }
-
-  document.getElementById('slides').innerHTML = parts.join('');
 
   /* ---------- Navigation (from the design, over the generated slides) ---------- */
-  const slides = Array.prototype.slice.call(document.querySelectorAll('#slides > section'));
-  const counter = document.getElementById('counter');
-  const progress = document.getElementById('progress');
-  const deckEl = document.documentElement;
-  const total = slides.length;
-  const pad = (n) => String(n).length < 2 ? '0' + n : '' + n;
-  let i = 0;
-  function show(n){
-    i = Math.max(0, Math.min(total - 1, n));
-    slides.forEach((sec, idx) => sec.classList.toggle('is-active', idx === i));
-    counter.textContent = pad(i + 1) + ' / ' + pad(total);
-    progress.style.width = ((i + 1) / total * 100) + '%';
-  }
-  const next = () => show(i + 1), prev = () => show(i - 1);
-  function toggleFs(){
-    if (document.fullscreenElement){ if (document.exitFullscreen) document.exitFullscreen(); }
-    else if (deckEl.requestFullscreen){ deckEl.requestFullscreen(); }
-  }
-  document.addEventListener('keydown', function(e){
-    switch(e.key){
-      case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown': e.preventDefault(); next(); break;
-      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': e.preventDefault(); prev(); break;
-      case 'Home': show(0); break;
-      case 'End': show(total - 1); break;
-      case 'f': case 'F': e.preventDefault(); toggleFs(); break;
-      case 'Escape': if(!document.fullscreenElement){ location.href = 'admin.html'; } break;
+  function setupNav(){
+    const slides = Array.prototype.slice.call(document.querySelectorAll('#slides > section'));
+    const counter = document.getElementById('counter');
+    const progress = document.getElementById('progress');
+    const deckEl = document.documentElement;
+    const total = slides.length;
+    const pad = (n) => String(n).length < 2 ? '0' + n : '' + n;
+    let i = 0;
+    function show(n){
+      i = Math.max(0, Math.min(total - 1, n));
+      slides.forEach((sec, idx) => sec.classList.toggle('is-active', idx === i));
+      counter.textContent = pad(i + 1) + ' / ' + pad(total);
+      progress.style.width = ((i + 1) / total * 100) + '%';
     }
-  });
-  document.getElementById('next').addEventListener('click', next);
-  document.getElementById('prev').addEventListener('click', prev);
-  show(0);
+    const next = () => show(i + 1), prev = () => show(i - 1);
+    function toggleFs(){
+      if (document.fullscreenElement){ if (document.exitFullscreen) document.exitFullscreen(); }
+      else if (deckEl.requestFullscreen){ deckEl.requestFullscreen(); }
+    }
+    document.addEventListener('keydown', function(e){
+      switch(e.key){
+        case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown': e.preventDefault(); next(); break;
+        case 'ArrowLeft': case 'ArrowUp': case 'PageUp': e.preventDefault(); prev(); break;
+        case 'Home': show(0); break;
+        case 'End': show(total - 1); break;
+        case 'f': case 'F': e.preventDefault(); toggleFs(); break;
+        case 'Escape': if(!document.fullscreenElement){ location.href = 'admin.html'; } break;
+      }
+    });
+    document.getElementById('next').addEventListener('click', next);
+    document.getElementById('prev').addEventListener('click', prev);
+    show(0);
+  }
+
+  renderPreflight();
 })();
 </script>
 </body>

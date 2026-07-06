@@ -13,11 +13,26 @@ async function currentProfile() {
   return data; // { id, team_id, role, teams: { name } }
 }
 
-async function activeMeeting() {
+// Every non-archived meeting. Multiple can be open at once (e.g. Friday's and
+// Wednesday's), so teams can keep contributing to each until it's archived.
+async function openMeetings() {
   const { data } = await supa.from('meetings').select('*').eq('is_active', true)
-    .order('created_at', { ascending: false }).limit(1).single();
-  return data;
+    .order('meeting_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false });
+  return data || [];
 }
+
+const MEETING_KEY = 'meeteam.meeting';
+// The meeting the user is currently working on. Remembered per-browser so it
+// survives page navigation; falls back to the soonest open meeting.
+async function selectedMeeting(list) {
+  const meetings = list || await openMeetings();
+  if (!meetings.length) return null;
+  const saved = localStorage.getItem(MEETING_KEY);
+  return meetings.find(m => m.id === saved) || meetings[0];
+}
+function setSelectedMeeting(id) { localStorage.setItem(MEETING_KEY, id); }
+function clearSelectedMeeting() { localStorage.removeItem(MEETING_KEY); }
 
 async function requireAuth(redirect = 'index.html') {
   const { data: { session } } = await supa.auth.getSession();

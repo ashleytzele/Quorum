@@ -6,7 +6,7 @@
 <title>Team history · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 <div class="page">
@@ -101,7 +101,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <script src="config.js"></script>
-<script src="supa.js"></script>
+<script src="supa.js?v=2"></script>
 <script>
 (async function(){
   await requireAuth();
@@ -116,7 +116,7 @@
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
   }
   async function fileLink(f){
-    const url = await signedUrl(f.file_path);
+    const url = f.url ? f.url : await signedUrl(f.file_path);
     return '<a class="detail-file" href="' + url + '" target="_blank" rel="noopener">' +
       '<span class="fico">' + fileIcon(f.file_name) + '</span>' +
       '<span class="fmeta"><span class="fname">' + esc(f.file_name) + '</span></span>' +
