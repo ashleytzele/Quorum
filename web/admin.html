@@ -148,6 +148,7 @@
     <div class="drawer-actions" style="display:flex;gap:10px;">
       <button class="btn btn-ghost" id="rename-team" type="button">Rename team</button>
       <button class="btn btn-ghost" id="delete-team" type="button">Delete team</button>
+      <button class="btn btn-primary" id="edit-as-team" type="button" style="display:none;">Edit this team's content</button>
     </div>
     <div>
       <div class="subhead">Submitted files</div>
@@ -305,6 +306,8 @@
   let currentTeam = null;
   async function openTeam(t, color){
     currentTeam = t;
+    var editBtn = document.getElementById('edit-as-team');
+    editBtn.style.display = (meeting && (meeting.model === 'admin' || meeting.model === 'hybrid')) ? '' : 'none';
     const n = noteOf(t.id);
     const files = filesOf(t.id);
     dBadge.textContent = initials(t.name); dBadge.style.background = color;
@@ -354,6 +357,10 @@
     const { error } = await supa.from('teams').delete().eq('id', currentTeam.id);
     if (error) { alert('Could not delete — the team may still have members or submissions.\n\n' + error.message); return; }
     location.reload();
+  });
+  document.getElementById('edit-as-team').addEventListener('click', function(){
+    if (!currentTeam || !mId) return;
+    location.href = 'team.html?meeting=' + mId + '&team=' + currentTeam.id;
   });
 
   /* ---------- Actions ---------- */
