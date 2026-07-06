@@ -157,7 +157,10 @@
   if (embed) document.documentElement.classList.add('embed');
   const onBehalf = !!(teamParam && me && me.role === 'admin');
   const effectiveTeamId = onBehalf ? teamParam : (me ? me.team_id : null);
-  const meetings = await openMeetings();
+  // Admin-run (VIP) meetings are admin-dashboard-only — never list them in the member
+  // workspace, even when an admin is viewing it (RLS returns them to admins). A VIP meeting
+  // opened explicitly via ?meeting= (the embedded workspace) still loads below.
+  const meetings = (await openMeetings()).filter(m => m.model !== 'admin');
   const meeting = meetingParam
     ? ((await supa.from('meetings').select('*').eq('id', meetingParam).maybeSingle()).data || await selectedMeeting(meetings))
     : await selectedMeeting(meetings);
