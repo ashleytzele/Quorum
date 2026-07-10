@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-09T00:00:00Z",
+  "title": "Design System: MeeTeam",
+  "extensions": {
+    "colorMeta": {
+      "indigo": { "role": "primary", "displayName": "Signal Indigo", "canonical": "oklch(51% 0.20 267)", "tonalRamp": ["oklch(20% 0.09 267)", "oklch(28% 0.13 267)", "oklch(41% 0.165 267)", "oklch(51% 0.20 267)", "oklch(60% 0.19 267)", "oklch(72% 0.15 267)", "oklch(85% 0.08 267)", "oklch(96% 0.02 267)"] },
+      "canvas": { "role": "neutral", "displayName": "Warm-Gray Canvas", "canonical": "oklch(98.4% 0.004 74)", "tonalRamp": ["oklch(17% 0.008 74)", "oklch(24% 0.010 74)", "oklch(38% 0.012 74)", "oklch(55% 0.013 74)", "oklch(70% 0.010 74)", "oklch(85% 0.007 74)", "oklch(95.6% 0.007 74)", "oklch(98.4% 0.004 74)"] },
+      "ink": { "role": "neutral", "displayName": "Warm Ink", "canonical": "oklch(24% 0.013 74)", "tonalRamp": ["oklch(17% 0.013 74)", "oklch(24% 0.013 74)", "oklch(38% 0.013 74)", "oklch(45% 0.013 74)", "oklch(51% 0.013 74)", "oklch(66% 0.012 74)", "oklch(80% 0.008 74)", "oklch(92% 0.005 74)"] },
+      "success": { "role": "tertiary", "displayName": "Muted Emerald", "canonical": "oklch(50% 0.13 158)", "tonalRamp": ["oklch(20% 0.06 158)", "oklch(30% 0.09 158)", "oklch(40% 0.12 158)", "oklch(50% 0.13 158)", "oklch(62% 0.13 158)", "oklch(74% 0.12 158)", "oklch(88% 0.06 158)", "oklch(95% 0.03 158)"] },
+      "danger": { "role": "tertiary", "displayName": "Signal Red", "canonical": "oklch(52% 0.19 25)", "tonalRamp": ["oklch(22% 0.09 25)", "oklch(32% 0.13 25)", "oklch(42% 0.17 25)", "oklch(52% 0.19 25)", "oklch(64% 0.18 25)", "oklch(75% 0.14 25)", "oklch(88% 0.07 25)", "oklch(95% 0.03 25)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles (h1) and the login heading — the largest UI type." },
+      "body": { "displayName": "Body", "purpose": "Default running text and data; prose caps at 65-75ch." },
+      "label": { "displayName": "Label", "purpose": "Uppercase micro-labels: column headers, pane labels, sub-heads." },
+      "document": { "displayName": "Document Serif", "purpose": "The exported minutes 'paper' only — Source Serif 4." },
+      "mono": { "displayName": "Mono", "purpose": "The markdown note editor and inline code only." }
+    },
+    "shadows": [
+      { "name": "resting", "value": "0 1px 2px oklch(28% 0.05 267 / .05), 0 1px 3px oklch(28% 0.05 267 / .06)", "purpose": "Cards and chips at rest — indigo-tinted, barely there." },
+      { "name": "raised", "value": "0 2px 4px oklch(28% 0.05 267 / .05), 0 12px 28px -10px oklch(28% 0.05 267 / .16)", "purpose": "Dropdowns and Present deck cards." },
+      { "name": "floating", "value": "0 28px 64px -18px oklch(28% 0.06 267 / .26)", "purpose": "Team drawer, modal dialogs, auth card." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(.2, .7, .2, 1)", "purpose": "Default easing for every state transition — exponential ease-out, no bounce." },
+      { "name": "duration-state", "value": "150ms", "purpose": "Hover/focus/selection feedback." },
+      { "name": "duration-reveal", "value": "250ms", "purpose": "Drawer, dialog, slide reveal — the ceiling. No page-load choreography." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "560px" },
+      { "name": "md", "value": "720px" },
+      { "name": "grid-collapse", "value": "940px" },
+      { "name": "container", "value": "1180px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action per view. Signal Indigo, deepens on hover/active.",
+      "html": "<button class=\"ds-btn-primary\">Present</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border:1px solid transparent;border-radius:10px;font:600 14px/1 'Hanken Grotesk',system-ui,sans-serif;color:#fff;background:oklch(51% 0.20 267);box-shadow:0 1px 2px oklch(41% 0.16 267/.28);cursor:pointer;transition:background .15s,box-shadow .15s;}.ds-btn-primary:hover{background:oklch(46% 0.185 267);}.ds-btn-primary:active{background:oklch(41% 0.165 267);}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 4px oklch(93% 0.05 267);}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "The default secondary. Surface fill, strong hairline, ink text.",
+      "html": "<button class=\"ds-btn-ghost\">Export minutes</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border:1px solid oklch(88% 0.008 74);border-radius:10px;font:600 14px/1 'Hanken Grotesk',system-ui,sans-serif;color:oklch(24% 0.013 74);background:#fff;cursor:pointer;transition:background .15s;}.ds-btn-ghost:hover{background:oklch(95.6% 0.007 74);}.ds-btn-ghost:focus-visible{outline:none;box-shadow:0 0 0 4px oklch(93% 0.05 267);}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive confirms only. Deep red so white text stays AA-legible in both themes.",
+      "html": "<button class=\"ds-btn-danger\">Delete team</button>",
+      "css": ".ds-btn-danger{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border:none;border-radius:10px;font:600 14px/1 'Hanken Grotesk',system-ui,sans-serif;color:#fff;background:oklch(52% 0.19 25);cursor:pointer;transition:filter .15s;}.ds-btn-danger:hover{filter:brightness(1.07);}.ds-btn-danger:focus-visible{outline:none;box-shadow:0 0 0 4px oklch(95% 0.03 25);}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Surface fill, strong hairline; focus shifts border to indigo with a tint glow.",
+      "html": "<input class=\"ds-input\" placeholder=\"e.g. Design\">",
+      "css": ".ds-input{width:260px;height:44px;padding:0 13px;border:1px solid oklch(88% 0.008 74);border-radius:10px;background:#fff;color:oklch(24% 0.013 74);font:400 14.5px 'Hanken Grotesk',system-ui,sans-serif;}.ds-input::placeholder{color:oklch(51% 0.013 74);}.ds-input:focus{outline:none;border-color:oklch(51% 0.20 267);box-shadow:0 0 0 4px oklch(93% 0.05 267);}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White surface on warm canvas, 1px border always, resting shadow. Never nested.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-head\">Teams</div><div class=\"ds-card-body\">Review each team's submission.</div></div>",
+      "css": ".ds-card{width:300px;background:#fff;border:1px solid oklch(92.6% 0.005 74);border-radius:14px;box-shadow:0 1px 2px oklch(28% 0.05 267/.05),0 1px 3px oklch(28% 0.05 267/.06);overflow:hidden;font-family:'Hanken Grotesk',system-ui,sans-serif;}.ds-card-head{padding:17px 22px;border-bottom:1px solid oklch(92.6% 0.005 74);font-weight:700;font-size:15.5px;letter-spacing:-.01em;color:oklch(24% 0.013 74);}.ds-card-body{padding:22px;color:oklch(45% 0.013 74);font-size:14px;line-height:1.5;}"
+    },
+    {
+      "name": "Pill",
+      "kind": "chip",
+      "refersTo": "pill",
+      "description": "Quiet metadata chip — indigo-tint wash, indigo-ink text, fully rounded.",
+      "html": "<span class=\"ds-pill\">VIP</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:6px;font:600 12px 'Hanken Grotesk',system-ui,sans-serif;padding:3px 9px;border-radius:999px;background:oklch(97% 0.02 267);color:oklch(41% 0.165 267);}"
+    },
+    {
+      "name": "Readiness Bar",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature ambient-status component: 'N of M submitted' with an indigo fill (scaleX, never width) that turns success-green at 100%.",
+      "html": "<div class=\"ds-readiness\"><span class=\"ds-rl\">3 of 5 teams submitted</span><span class=\"ds-rtrack\"><span class=\"ds-rfill\"></span></span><span class=\"ds-rpct\">60%</span></div>",
+      "css": ".ds-readiness{display:flex;align-items:center;gap:14px;width:420px;font-family:'Hanken Grotesk',system-ui,sans-serif;}.ds-rl{font-size:13px;font-weight:600;color:oklch(45% 0.013 74);white-space:nowrap;}.ds-rtrack{flex:1;height:8px;border-radius:999px;background:oklch(95.6% 0.007 74);overflow:hidden;}.ds-rfill{display:block;height:100%;width:100%;background:oklch(51% 0.20 267);border-radius:999px;transform:scaleX(.6);transform-origin:left;}.ds-rpct{font-size:12.5px;font-weight:700;color:oklch(41% 0.165 267);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Well-Run Meeting",
+    "overview": "MeeTeam should feel the way a well-run meeting feels — calm, organized, never shouty. The interface is an instrument the fluent user trusts on sight and then stops noticing: chrome recedes, the task carries all the visual weight, and nothing asks for attention it hasn't earned. This is Linear/Stripe-grade earned familiarity, not novelty. The system is a single restrained indigo accent over warm-gray OKLCH neutrals, producing two co-equal themes — light and dark from one token set. Indigo appears only where meaning lives: the primary action, the current selection, and state. Everything else is quiet.",
+    "keyCharacteristics": [
+      "One accent (indigo), used for action, selection, and state — never decoration.",
+      "Warm-gray OKLCH neutrals; two themes from one token set.",
+      "The task is the hero; navigation chrome is dimmed so content takes precedence.",
+      "Fast, state-only motion (150-250ms) — no page-load choreography.",
+      "WCAG AA is a floor, not a finish (body >=4.5:1, both themes)."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Indigo is the only chromatic accent. It marks action, selection, and live state — nothing else. Semantic state colors are a separate, muted vocabulary and never stand in as a second brand accent.", "section": "colors" },
+      { "name": "The Warm-Gray Rule", "body": "Neutrals are warm at hue 74, chroma <=0.008. The instant a neutral reads as cream, sand, or beige, it has become the AI-default and must be pulled back to gray.", "section": "colors" },
+      { "name": "The One-Family Rule", "body": "Product UI is one sans (Hanken Grotesk) in multiple weights. The serif (Source Serif 4) is only for the minutes document; mono is only for the note editor and code.", "section": "typography" },
+      { "name": "The Quiet-Depth Rule", "body": "Depth is carried by borders and tonal layering first; shadow is a supporting actor for things that truly float (drawer, dialog, toast). If a flat panel has a shadow, remove it.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep indigo to action, selection, and live state. One filled primary button per view.",
+      "Do build every screen from the same tokens so light and dark are equally first-class; verify body text >=4.5:1 in both themes.",
+      "Do dim the navigation chrome so the content column takes precedence.",
+      "Do keep motion fast (150-250ms) and state-only, with an ease-out curve; respect prefers-reduced-motion.",
+      "Do use in-app dialogs and toasts (ui.js) for every confirm/prompt/error — never a native browser dialog.",
+      "Do animate with transform/opacity (e.g. the readiness fill's scaleX), never layout properties."
+    ],
+    "donts": [
+      "Don't ship the generic Bootstrap/Material admin look — flat gray, default components, no point of view.",
+      "Don't reach for consumer-social exuberance — playful gradients, big emoji, bouncy/elastic motion.",
+      "Don't drift into the 2023 SaaS-cream + serif-display + terracotta aesthetic; the neutral is warm-gray, never cream.",
+      "Don't drown the UI in decorative charts, badges, or color for its own sake.",
+      "Don't introduce a second accent, or use full-saturation state color on inactive elements.",
+      "Don't nest cards, use border-left/right >1px as a colored stripe, gradient-clip text, or apply decorative glassmorphism.",
+      "Don't treat dark mode as an afterthought skin — it is a first-class output of the token set."
+    ]
+  }
+}

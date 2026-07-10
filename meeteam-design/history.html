@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Team history · Quorum</title>
+<title>Team history · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<script src="theme.js?v=2"></script>
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 <div class="page">
@@ -19,7 +18,7 @@
           <circle cx="12.6" cy="16" r="5.4" fill="#fff"/>
           <circle cx="19.4" cy="16" r="5.4" fill="#fff" fill-opacity=".55"/>
         </svg>
-        <span>Quorum</span>
+        <span>MeeTeam</span>
       </a>
       <div class="context">
         <span class="team" id="team-name">Your team</span>
@@ -37,7 +36,7 @@
     <div class="container">
       <div class="grid-head no-print">
         <div>
-          <h1 class="page-title">Meeting history</h1>
+          <div class="page-title">Meeting history</div>
           <div class="page-sub">Look back at past meetings — your submissions and the final minutes.</div>
         </div>
       </div>
@@ -105,7 +104,6 @@
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <script src="config.js"></script>
 <script src="supa.js?v=3"></script>
-<script src="ui.js?v=1"></script>
 <script>
 (async function(){
   await requireAuth();
@@ -121,10 +119,9 @@
   }
   async function fileLink(f){
     const url = f.url ? f.url : await signedUrl(f.file_path);
-    const cap = f.caption && f.caption.trim() ? '<span class="fsize">' + esc(f.caption) + '</span>' : '';
     return '<a class="detail-file" href="' + esc(url) + '" target="_blank" rel="noopener">' +
       '<span class="fico">' + fileIcon(f.file_name) + '</span>' +
-      '<span class="fmeta"><span class="fname">' + esc(f.file_name) + '</span>' + cap + '</span>' +
+      '<span class="fmeta"><span class="fname">' + esc(f.file_name) + '</span></span>' +
       '<span class="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></span></a>';
   }
 
@@ -208,23 +205,13 @@
   meetings.forEach((m, idx) => {
     const li = document.createElement('li');
     li.className = 'hitem';
-    li.tabIndex = 0;
-    li.setAttribute('role', 'button');
-    li.setAttribute('aria-label', 'Open ' + (m.title || 'meeting'));
     const modeTag = m.model === 'admin' ? ' <span class="mt-flag">VIP</span>' : '';
     li.innerHTML = '<div class="htitle">' + esc(m.title) + modeTag + '</div>' +
       '<div class="hdate">' + esc(m.meeting_date || '') + '</div>' +
       '<div class="hmeta"><span>' + subsOfMeeting(m.id).length + ' files</span><span>' +
       (m.minutes_final ? 'minutes' : 'no minutes') + '</span></div>';
     li.addEventListener('click', () => select(idx));
-    li.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(idx); } });
     if (isAdmin) {
-      const restore = document.createElement('button');
-      restore.className = 'hdel hrestore'; restore.type = 'button'; restore.title = 'Restore to active'; restore.style.right = '46px';
-      restore.setAttribute('aria-label', 'Restore ' + m.title + ' to active');
-      restore.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/></svg>';
-      restore.addEventListener('click', function(e){ e.stopPropagation(); restoreMeeting(m); });
-      li.appendChild(restore);
       const del = document.createElement('button');
       del.className = 'hdel'; del.type = 'button'; del.title = 'Delete meeting';
       del.setAttribute('aria-label', 'Delete ' + m.title);
@@ -237,22 +224,13 @@
 
   // Delete a past meeting + its notes/files (admin only). Triggered by each item's icon.
   async function deleteMeeting(m){
-    const ok = await confirmDialog({ title: 'Delete meeting', body: 'Delete "' + m.title + '" from history? This permanently removes its notes and files and cannot be undone.', danger: true, confirmText: 'Delete' });
-    if (!ok) return;
+    if (!confirm('Delete "' + m.title + '" from history?\n\nThis permanently removes its notes and files and cannot be undone.')) return;
     const paths = subsOfMeeting(m.id).filter(s => s.file_path).map(s => s.file_path);
     if (paths.length) await supa.storage.from('submissions').remove(paths);
     await supa.from('submissions').delete().eq('meeting_id', m.id);
     await supa.from('notes').delete().eq('meeting_id', m.id);
     const { error } = await supa.from('meetings').delete().eq('id', m.id);
-    if (error) { console.error(error); toast('Couldn’t delete the meeting — please try again.', 'error'); return; }
-    location.reload();
-  }
-
-  // Un-archive: put a past meeting back on the active list (reverses Archive / Finalize & archive).
-  async function restoreMeeting(m){
-    const { error } = await supa.from('meetings').update({ is_active: true }).eq('id', m.id);
-    if (error) { console.error(error); toast('Couldn’t restore the meeting — please try again.', 'error'); return; }
-    toast('“' + m.title + '” restored to the active list', 'ok');
+    if (error) { alert('Could not delete: ' + error.message); return; }
     location.reload();
   }
 

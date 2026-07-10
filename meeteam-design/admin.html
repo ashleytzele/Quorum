@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin · Quorum</title>
+<title>Admin · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<script src="theme.js?v=2"></script>
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 <div class="page">
@@ -19,11 +18,11 @@
           <circle cx="12.6" cy="16" r="5.4" fill="#fff"/>
           <circle cx="19.4" cy="16" r="5.4" fill="#fff" fill-opacity=".55"/>
         </svg>
-        <span>Quorum</span>
+        <span>MeeTeam</span>
       </a>
       <div class="context">
         <span class="team" id="org-name">Admin console</span>
-        <span class="meeting">Administrator</span>
+        <span class="meeting">Admin console</span>
       </div>
       <span class="spacer"></span>
       <a class="toplink" href="history.html">History</a>
@@ -36,7 +35,7 @@
     <div class="container">
       <div class="grid-head">
         <div>
-          <h1 class="page-title">Meeting administration</h1>
+          <div class="page-title">Meeting administration</div>
           <div class="page-sub">Configure the meeting, review each team's submission, then present or export.</div>
         </div>
       </div>
@@ -49,7 +48,7 @@
             Meeting details
           </span>
           <span style="display:flex;align-items:center;gap:14px;">
-            <span class="status ok" id="meeting-saved" aria-live="polite"><span class="dot"></span>All changes saved</span>
+            <span class="status" id="meeting-saved"><span class="dot"></span>All changes saved</span>
             <button class="btn btn-ghost" id="archive-meeting-btn" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18M6 8v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8M4.5 8 6 4.5A1.5 1.5 0 0 1 7.4 3.5h9.2A1.5 1.5 0 0 1 18 4.5L19.5 8M10 12h4"/></svg>
               Archive
@@ -81,7 +80,6 @@
                 <option value="team">Team</option>
                 <option value="admin">VIP</option>
               </select>
-              <span class="field-hint" id="model-hint">Team: each team submits their own · VIP: you author it all.</span>
             </div>
           </form>
         </div>
@@ -113,11 +111,6 @@
               Add team
             </button>
           </span>
-        </div>
-        <div class="readiness" id="readiness" style="display:none;">
-          <span class="rl"><b id="ready-n">0</b> of <b id="ready-total">0</b> teams submitted</span>
-          <span class="rtrack"><span class="rfill" id="ready-fill"></span></span>
-          <span class="rpct" id="ready-pct">0%</span>
         </div>
         <div class="table-wrap">
           <table class="table">
@@ -151,7 +144,7 @@
 
 <!-- Team detail drawer -->
 <div class="drawer-overlay" id="drawer-overlay"></div>
-<aside class="drawer" id="team-detail" role="dialog" aria-modal="true" aria-hidden="true" inert aria-label="Team detail">
+<aside class="drawer" id="team-detail" aria-hidden="true" aria-label="Team detail">
   <div class="drawer-head">
     <span class="team-badge" id="detail-badge" style="background:#3b4dd8;">PR</span>
     <div class="drawer-titles">
@@ -190,7 +183,6 @@
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <script src="config.js"></script>
 <script src="supa.js?v=3"></script>
-<script src="ui.js?v=1"></script>
 <script>
 (async function(){
   await requireAuth();
@@ -210,36 +202,21 @@
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
   }
 
-  /* ---------- Meetings: tabs + per-meeting context. Switching happens IN PLACE — no reload. ---------- */
+  /* ---------- Meeting details (pick an open meeting to edit; create if none) ---------- */
   const meetings = await openMeetings();
-  let meeting = await selectedMeeting(meetings);
+  const meeting = await selectedMeeting(meetings);
   const tabsEl = document.getElementById('meeting-tabs');
   const archiveBtn = document.getElementById('archive-meeting-btn');
-  const fTitle = document.getElementById('m-title');
-  const fDate  = document.getElementById('m-date');
-  const fOrg   = document.getElementById('m-org');
-  const fModel = document.getElementById('m-model');
-  const savedEl = document.getElementById('meeting-saved');
-  const teamsCard = document.getElementById('teams-card');
-  const vipWs = document.getElementById('vip-workspace');
-
-  // Teams are global; submissions/notes are per selected meeting.
-  const { data: teams } = await supa.from('teams').select('*').order('name');
-  let subs = [], notes = [], mId = null, isVip = false;
-  const filesOf = id => subs.filter(s => s.team_id === id);
-  const noteOf  = id => notes.find(n => n.team_id === id) || {};
-  const tbody = document.getElementById('team-rows');
-
-  // Tab dots: green when every team has submitted for that meeting.
-  const { data: tabTeams } = await supa.from('teams').select('id');
-  const totalTeams = (tabTeams || []).length;
-  const { data: tabNotes } = await supa.from('notes').select('meeting_id, submitted').in('meeting_id', meetings.map(m => m.id));
-  const subCount = (mid) => (tabNotes || []).filter(n => n.meeting_id === mid && n.submitted).length;
-  const fmtTab = (v) => { if (!v) return 'No date'; const d = new Date(v + 'T00:00'); return isNaN(d) ? v : d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }); };
-
-  function renderTabs(){
-    archiveBtn.disabled = !meetings.length;
-    if (!meetings.length){ tabsEl.innerHTML = '<div class="muted-note">No open meetings — fill in the details below to create one.</div>'; return; }
+  if (!meetings.length) {
+    tabsEl.innerHTML = '<div class="muted-note">No open meetings — fill in the details below to create one.</div>';
+    archiveBtn.disabled = true;
+  } else {
+    // Per-meeting submission progress for the tab dots (green = every team submitted).
+    const { data: tabTeams } = await supa.from('teams').select('id');
+    const totalTeams = (tabTeams || []).length;
+    const { data: tabNotes } = await supa.from('notes').select('meeting_id, submitted').in('meeting_id', meetings.map(m => m.id));
+    const subCount = (mid) => (tabNotes || []).filter(n => n.meeting_id === mid && n.submitted).length;
+    const fmtTab = (v) => { if (!v) return 'No date'; const d = new Date(v + 'T00:00'); return isNaN(d) ? v : d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }); };
     tabsEl.innerHTML = meetings.map(function(m){
       const done = totalTeams > 0 && subCount(m.id) >= totalTeams;
       const active = meeting && m.id === meeting.id ? ' active' : '';
@@ -252,93 +229,85 @@
         '<span class="mt-sub">' + label + modelBadge + '</span></span></button>';
     }).join('');
     Array.prototype.forEach.call(tabsEl.querySelectorAll('.meeting-tab'), function(btn){
-      btn.addEventListener('click', function(){ switchMeeting(btn.dataset.id); });
+      btn.addEventListener('click', function(){ setSelectedMeeting(btn.dataset.id); location.reload(); });
     });
   }
-
-  // Render the per-meeting context (form + VIP toggle + team table) for meeting m — in place, no reload.
-  async function showMeeting(m){
-    meeting = m || null;
-    mId = m ? m.id : null;
-    isVip = !!(m && m.model === 'admin');
-    fTitle.value = m ? (m.title || '') : '';
-    fDate.value  = m ? (m.meeting_date || '') : '';
-    fOrg.value   = m ? (m.org || '') : '';
-    fModel.value = m ? (m.model || 'team') : 'team';
-    document.getElementById('org-name').textContent = (m && m.org) || 'Admin console';
-    flashSaved();
-    if (typeof closeDrawer === 'function') closeDrawer();
-    if (isVip){
-      teamsCard.style.display = 'none'; vipWs.style.display = '';
-      document.getElementById('vip-frame').src = 'team.html?embed=1&meeting=' + mId + '&team=' + me.team_id;
-    } else {
-      vipWs.style.display = 'none'; teamsCard.style.display = '';
-    }
-    Array.prototype.forEach.call(tabsEl.querySelectorAll('.meeting-tab'), function(b){ b.classList.toggle('active', !!m && b.dataset.id === m.id); });
-    subs = []; notes = [];
-    if (mId){
-      subs = (await supa.from('submissions').select('*').eq('meeting_id', mId)).data || [];
-      notes = (await supa.from('notes').select('*').eq('meeting_id', mId)).data || [];
-    }
-    tbody.innerHTML = '';
-    (teams || []).forEach(renderTeamRow);
-    refreshReadiness();
-  }
-  async function switchMeeting(id){
-    setSelectedMeeting(id);
-    await showMeeting(meetings.find(function(x){ return x.id === id; }) || null);
-  }
-  // Keep the embedded VIP workspace iframe sized to its content (registered once).
-  window.addEventListener('message', function(e){
-    if (e.data && typeof e.data.mtHeight === 'number'){ const fr = document.getElementById('vip-frame'); if (fr) fr.style.height = (e.data.mtHeight + 8) + 'px'; }
-  });
-
+  const fTitle = document.getElementById('m-title');
+  const fDate  = document.getElementById('m-date');
+  const fOrg   = document.getElementById('m-org');
+  const fModel = document.getElementById('m-model');
+  const savedEl = document.getElementById('meeting-saved');
+  let mId = meeting ? meeting.id : null;
+  if (meeting){ fTitle.value = meeting.title || ''; fDate.value = meeting.meeting_date || ''; fOrg.value = meeting.org || ''; document.getElementById('org-name').textContent = meeting.org || 'Admin console';
+    fModel.value = meeting.model || 'team'; }
   function flashSaving(){ savedEl.className = 'status saving'; savedEl.innerHTML = '<span class="dot"></span>Saving…'; }
   function flashSaved(){ savedEl.className = 'status ok'; savedEl.innerHTML = '<span class="dot"></span>All changes saved'; }
   async function persistMeeting(){
     flashSaving();
     const payload = { title: fTitle.value || 'Untitled', meeting_date: fDate.value || null, org: fOrg.value, model: fModel.value };
     if (mId){ await supa.from('meetings').update(payload).eq('id', mId); }
-    else { const { data } = await supa.from('meetings').insert(Object.assign({ is_active: true }, payload)).select().single(); mId = data.id; meeting = data; meetings.push(data); renderTabs(); }
+    else { const { data } = await supa.from('meetings').insert(Object.assign({ is_active: true }, payload)).select().single(); mId = data.id; }
     flashSaved();
   }
   let mtimer;
   [fTitle, fDate, fOrg, fModel].forEach(function(f){ f.addEventListener('input', function(){ flashSaving(); clearTimeout(mtimer); mtimer = setTimeout(persistMeeting, 600); }); });
   document.getElementById('meeting-form').addEventListener('submit', function(e){ e.preventDefault(); persistMeeting(); });
 
-  // New meeting: add another open meeting; select it in place.
+  // New meeting: add another open meeting alongside the existing ones (teams keep
+  // contributing to each). It does NOT archive anything — that's the Archive button.
   document.getElementById('new-meeting-btn').addEventListener('click', async function(){
     const today = new Date().toISOString().slice(0, 10);
-    const { data } = await supa.from('meetings').insert({ title: 'New meeting', meeting_date: today, org: fOrg.value, is_active: true }).select().single();
-    if (!data) return;
-    meetings.push(data); renderTabs();
+    const { data } = await supa.from('meetings').insert({
+      title: 'New meeting', meeting_date: today, org: fOrg.value, is_active: true,
+    }).select().single();
     setSelectedMeeting(data.id);
-    await showMeeting(data);
+    location.reload();
   });
 
-  // Archive: move the selected meeting to History (is_active=false); re-render in place.
+  // Archive: move the selected meeting to History (is_active=false). Its notes and
+  // files stay intact and readable there; teams just stop seeing it in their picker.
   archiveBtn.addEventListener('click', async function(){
     if (!mId) return;
-    const ok = await confirmDialog({ title: 'Archive meeting', body: 'Archive this meeting to History? Teams will no longer see it in their list — its notes and files are kept.', confirmText: 'Archive' });
-    if (!ok) return;
-    const aId = mId;
-    await supa.from('meetings').update({ is_active: false }).eq('id', aId);
-    const ix = meetings.findIndex(function(x){ return x.id === aId; });
-    if (ix >= 0) meetings.splice(ix, 1);
+    if (!confirm('Archive this meeting to History? Teams will no longer see it in their meeting list. Its notes and files are kept.')) return;
+    await supa.from('meetings').update({ is_active: false }).eq('id', mId);
     clearSelectedMeeting();
-    renderTabs();
-    await showMeeting(meetings[0] || null);
-    toast(meetings.length ? 'Meeting archived' : 'Meeting archived — no open meetings left', 'ok');
+    location.reload();
   });
-  // Render one team row. Reused when a team is added so the table updates in place — no full reload.
-  function renderTeamRow(t, idx){
+
+  /* ---------- Admin-run (VIP) meetings: embed one admin workspace, hide teams ---------- */
+  const isVip = !!(meeting && meeting.model === 'admin');
+  if (isVip) {
+    document.getElementById('teams-card').style.display = 'none';
+    document.getElementById('vip-workspace').style.display = '';
+    const frame = document.getElementById('vip-frame');
+    frame.src = 'team.html?embed=1&meeting=' + mId + '&team=' + me.team_id;
+    window.addEventListener('message', function(e){
+      if (e.data && typeof e.data.mtHeight === 'number') frame.style.height = (e.data.mtHeight + 8) + 'px';
+    });
+  }
+
+  /* ---------- Load teams + submissions + notes ---------- */
+  const { data: teams } = await supa.from('teams').select('*').order('name');
+  let subs = [], notes = [];
+  if (mId){
+    subs = (await supa.from('submissions').select('*').eq('meeting_id', mId)).data || [];
+    notes = (await supa.from('notes').select('*').eq('meeting_id', mId)).data || [];
+  }
+  const filesOf = id => subs.filter(s => s.team_id === id);
+  const noteOf  = id => notes.find(n => n.team_id === id) || {};
+  document.getElementById('team-count').textContent = (teams || []).length + ' teams';
+
+  const tbody = document.getElementById('team-rows');
+  (teams || []).forEach(function(t, idx){
     const n = noteOf(t.id);
     const color = PALETTE[idx % PALETTE.length];
     const hasPre = n.pre_note && n.pre_note.trim();
     const hasNotes = n.content && n.content.trim();
+    // Pre-meeting = the submission (pre_note + files, marked done via the Submit toggle).
     const preCell = n.submitted
       ? '<span class="notes-yes">' + CHECK + 'Submitted</span>'
       : (hasPre ? '<span class="notes-yes">' + CHECK + 'Draft</span>' : '<span class="notes-no">— None</span>');
+    // Notes = the meeting notes that feed the minutes, with their own submission status.
     const notesCell = n.notes_submitted
       ? '<span class="notes-yes">' + CHECK + 'Submitted</span>'
       : (hasNotes ? '<span class="notes-yes">' + CHECK + 'Draft</span>' : '<span class="notes-no">— No notes</span>');
@@ -350,27 +319,10 @@
       '<td class="num"><span class="count">' + filesOf(t.id).length + '</span></td>' +
       '<td>' + preCell + '</td>' +
       '<td>' + notesCell + '</td>' +
-      '<td style="text-align:right;"><button class="view-btn" type="button" aria-label="View ' + esc(t.name) + '">View</button></td>';
+      '<td style="text-align:right;"><button class="view-btn" type="button">View</button></td>';
     tr.addEventListener('click', function(){ openTeam(t, color); });
     tbody.appendChild(tr);
-    return tr;
-  }
-  // Recompute team count + readiness bar from the current teams — called after any add/delete.
-  function refreshReadiness(){
-    const total = (teams || []).length;
-    document.getElementById('team-count').textContent = total + (total === 1 ? ' team' : ' teams');
-    const bar = document.getElementById('readiness');
-    if (!mId || !total){ bar.style.display = 'none'; return; }
-    const ready = teams.filter(t => noteOf(t.id).submitted).length;
-    const ratio = ready / total;
-    document.getElementById('ready-n').textContent = ready;
-    document.getElementById('ready-total').textContent = total;
-    document.getElementById('ready-pct').textContent = Math.round(ratio * 100) + '%';
-    document.getElementById('ready-fill').style.transform = 'scaleX(' + ratio + ')';
-    bar.classList.toggle('all-ready', ready === total);
-    bar.style.display = 'flex';
-  }
-  // Initial render happens at the very end of the IIFE (after the drawer consts are initialized).
+  });
 
   /* ---------- Drawer ---------- */
   const overlay = document.getElementById('drawer-overlay');
@@ -382,7 +334,6 @@
   const dNotes  = document.getElementById('detail-notes');
 
   let currentTeam = null;
-  let lastTrigger = null;
   async function openTeam(t, color){
     currentTeam = t;
     renderRoster(t.id);
@@ -395,100 +346,46 @@
     dNotes.innerHTML =
       '<h4>Meeting notes</h4>' + md.render(n.content && n.content.trim() ? n.content : '_none_') +
       '<h4>Pre-meeting note</h4>' + md.render(n.pre_note && n.pre_note.trim() ? n.pre_note : '_none_');
-    lastTrigger = document.activeElement;
-    drawer.removeAttribute('inert');
     overlay.classList.add('open'); drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false');
-    document.getElementById('drawer-close').focus();
     if (files.length){
       const html = [];
       for (const f of files){
         const url = f.url ? f.url : await signedUrl(f.file_path);
-        const cap = f.caption && f.caption.trim() ? '<span class="fsize">' + esc(f.caption) + '</span>' : '';
         html.push('<a class="detail-file" href="' + esc(url) + '" target="_blank" rel="noopener">' +
           '<span class="fico">' + fileIcon(f.file_name) + '</span>' +
-          '<span class="fmeta"><span class="fname">' + esc(f.file_name) + '</span>' + cap + '</span>' +
+          '<span class="fmeta"><span class="fname">' + esc(f.file_name) + '</span></span>' +
           '<span class="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></span></a>');
       }
       dFiles.innerHTML = html.join('');
     }
   }
-  function closeDrawer(){ overlay.classList.remove('open'); drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); if (lastTrigger && lastTrigger.focus) { lastTrigger.focus(); lastTrigger = null; } drawer.setAttribute('inert',''); }
+  function closeDrawer(){ overlay.classList.remove('open'); drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); }
   overlay.addEventListener('click', closeDrawer);
   document.getElementById('drawer-close').addEventListener('click', closeDrawer);
-  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
-  // Trap Tab within the open drawer so keyboard focus can't wander behind the overlay.
-  drawer.addEventListener('keydown', function(e){
-    if (e.key !== 'Tab' || !drawer.classList.contains('open')) return;
-    const f = drawer.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    if (!f.length) return;
-    const first = f[0], last = f[f.length - 1];
-    if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-  });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeDrawer(); });
 
   /* ---------- Team management (create / rename / delete) ---------- */
-  // Shared email parsing: split on space/comma/semicolon, lowercase, keep valid addresses.
-  function parseEmails(str){
-    return String(str || '').split(/[\s,;]+/).map(function(s){ return s.trim().toLowerCase(); })
-      .filter(function(s){ return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s); });
-  }
-
   document.getElementById('add-team-btn').addEventListener('click', async function(){
-    const res = await promptDialog({
-      title: 'Add team',
-      confirmText: 'Add team',
-      fields: [
-        { name: 'name', label: 'Team name', placeholder: 'e.g. Design' },
-        { name: 'emails', label: 'Invite members (optional)', placeholder: 'Emails — space or comma separated' }
-      ]
-    });
-    if (!res || !res.name) return;
-    const { data: team, error } = await supa.from('teams').insert({ name: res.name }).select().single();
-    if (error) { console.error(error); toast('Couldn’t add the team — please try again.', 'error'); return; }
-    teams.push(team);
-    renderTeamRow(team, teams.length - 1);   // in place — no reload
-    refreshReadiness();
-    const emails = parseEmails(res.emails);
-    if (emails.length) {
-      const rows = emails.map(function(e){ return { email: e, team_id: team.id }; });
-      const { error: invErr } = await supa.from('team_invites').upsert(rows, { onConflict: 'email' });
-      if (invErr) { console.error(invErr); toast('Team added, but the invites couldn’t be sent — add them from the team panel.', 'error'); }
-      else toast('Team added · ' + emails.length + (emails.length === 1 ? ' person invited' : ' people invited'), 'ok');
-    } else {
-      toast('Team added', 'ok');
-    }
+    const name = prompt('New team name');
+    if (!name || !name.trim()) return;
+    const { error } = await supa.from('teams').insert({ name: name.trim() });
+    if (error) { alert('Could not add team:\n' + error.message); return; }
+    location.reload();
   });
   document.getElementById('rename-team').addEventListener('click', async function(){
     if (!currentTeam) return;
-    const name = await promptDialog({ title: 'Rename team', label: 'Team name', value: currentTeam.name });
+    const name = prompt('Rename team', currentTeam.name);
     if (!name || !name.trim() || name.trim() === currentTeam.name) return;
-    const newName = name.trim();
-    const { error } = await supa.from('teams').update({ name: newName }).eq('id', currentTeam.id);
-    if (error) { console.error(error); toast('Couldn’t rename the team — please try again.', 'error'); return; }
-    currentTeam.name = newName;
-    const row = tbody.querySelector('tr[data-team-id="' + currentTeam.id + '"]');
-    if (row){
-      const color = row.querySelector('.team-badge').style.background;
-      row.querySelector('.team-cell').innerHTML = '<span class="team-badge" style="background:' + color + ';">' + initials(newName) + '</span>' + esc(newName);
-      row.querySelector('.view-btn').setAttribute('aria-label', 'View ' + newName);
-    }
-    document.getElementById('detail-name').textContent = newName;
-    toast('Team renamed', 'ok');
+    const { error } = await supa.from('teams').update({ name: name.trim() }).eq('id', currentTeam.id);
+    if (error) { alert('Could not rename:\n' + error.message); return; }
+    location.reload();
   });
   document.getElementById('delete-team').addEventListener('click', async function(){
     if (!currentTeam) return;
-    const ok = await confirmDialog({ title: 'Delete team', body: 'Delete "' + currentTeam.name + '"? This permanently removes the team and can\'t be undone.', danger: true, confirmText: 'Delete team' });
-    if (!ok) return;
-    const delId = currentTeam.id;
-    const { error } = await supa.from('teams').delete().eq('id', delId);
-    if (error) { console.error(error); toast('Couldn’t delete — the team may still have members or submissions.', 'error'); return; }
-    const row = tbody.querySelector('tr[data-team-id="' + delId + '"]');
-    if (row) row.remove();
-    const idx = teams.findIndex(function(t){ return t.id === delId; });
-    if (idx >= 0) teams.splice(idx, 1);
-    closeDrawer();
-    refreshReadiness();
-    toast('Team deleted', 'ok');
+    if (!confirm('Delete "' + currentTeam.name + '"? This can\'t be undone.')) return;
+    const { error } = await supa.from('teams').delete().eq('id', currentTeam.id);
+    if (error) { alert('Could not delete — the team may still have members or submissions.\n\n' + error.message); return; }
+    location.reload();
   });
 
   /* ---------- Members (invite by email → auto-join on login) ---------- */
@@ -510,12 +407,12 @@
   }
   async function addInvites(teamId){
     const input = document.getElementById('invite-emails');
-    const emails = parseEmails(input.value);
-    if (!emails.length){ toast('Enter one or more valid email addresses.', 'error'); return; }
+    const emails = input.value.split(/[\s,;]+/).map(function(s){ return s.trim().toLowerCase(); })
+      .filter(function(s){ return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s); });
+    if (!emails.length){ alert('Enter one or more valid email addresses.'); return; }
     const rows = emails.map(function(e){ return { email: e, team_id: teamId }; });
     const { error } = await supa.from('team_invites').upsert(rows, { onConflict: 'email' });
-    if (error){ console.error(error); toast('Couldn’t send the invites — please try again.', 'error'); return; }
-    toast(rows.length + (rows.length === 1 ? ' person invited' : ' people invited'), 'ok');
+    if (error){ alert('Could not add: ' + error.message); return; }
     input.value = '';
     renderRoster(teamId);
   }
@@ -533,10 +430,6 @@
   // so they always match the selected tab regardless of remembered selection.
   document.getElementById('present-btn').addEventListener('click', function(){ location.href = mId ? 'present.html?meeting=' + mId : 'present.html'; });
   document.getElementById('minutes-btn').addEventListener('click', function(){ location.href = mId ? 'minutes.html?meeting=' + mId : 'minutes.html'; });
-
-  // Everything is wired — do the initial render now that the drawer consts exist.
-  renderTabs();
-  await showMeeting(meeting);
 })();
 </script>
 </body>

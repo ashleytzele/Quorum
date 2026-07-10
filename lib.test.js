@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { classifyFile } = require('./lib.js');
+const { classifyFile } = require('./web/lib.js');
 
 test('classifyFile maps extensions to kinds', () => {
   assert.equal(classifyFile('notes.md'), 'markdown');
@@ -10,14 +10,20 @@ test('classifyFile maps extensions to kinds', () => {
   assert.equal(classifyFile('shot.PNG'), 'image');
   assert.equal(classifyFile('pic.jpeg'), 'image');
   assert.equal(classifyFile('roadmap.pdf'), 'pdf');
-  assert.equal(classifyFile('update.docx'), 'other');
+  assert.equal(classifyFile('page.html'), 'html');
+  assert.equal(classifyFile('index.HTM'), 'html');
+  assert.equal(classifyFile('deck.pptx'), 'office');
+  assert.equal(classifyFile('update.docx'), 'office');
+  assert.equal(classifyFile('keynote.key'), 'other');   // Office viewer can't render Keynote → link
+  assert.equal(classifyFile('notes.odt'), 'other');
+  assert.equal(classifyFile('archive.zip'), 'other');
   assert.equal(classifyFile('noext'), 'other');
 });
 
-const { isAccepted } = require('./lib.js');
+const { isAccepted } = require('./web/lib.js');
 
 test('isAccepted allows docs and pictures, rejects the rest', () => {
-  for (const ok of ['a.pdf', 'b.DOCX', 'c.doc', 'd.txt', 'e.md', 'f.png', 'g.JPG', 'h.webp']) {
+  for (const ok of ['a.pdf', 'b.DOCX', 'c.doc', 'd.txt', 'e.md', 'f.png', 'g.JPG', 'h.webp', 'i.pptx', 'j.html']) {
     assert.equal(isAccepted(ok), true, ok);
   }
   for (const no of ['a.zip', 'b.mp4', 'c.exe', 'd.csv', 'noext']) {
@@ -25,7 +31,7 @@ test('isAccepted allows docs and pictures, rejects the rest', () => {
   }
 });
 
-const { groupFilesByTeam } = require('./lib.js');
+const { groupFilesByTeam } = require('./web/lib.js');
 
 test('groupFilesByTeam: subfolder = team, loose file = its own team (by filename)', () => {
   const files = [
@@ -46,7 +52,7 @@ test('groupFilesByTeam: subfolder = team, loose file = its own team (by filename
   assert.equal(sales.files[0].name, 'Sales.txt'); // extension stripped only from team name
 });
 
-const { buildMinutesMarkdown } = require('./lib.js');
+const { buildMinutesMarkdown } = require('./web/lib.js');
 
 test('buildMinutesMarkdown fills template with empty fallbacks', () => {
   const md = buildMinutesMarkdown({

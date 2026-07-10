@@ -13,10 +13,6 @@ function classifyFile(name) {
   if (['md', 'markdown', 'txt'].includes(ext)) return 'markdown';
   if (IMG_EXT.includes(ext)) return 'image';
   if (ext === 'pdf') return 'pdf';
-  if (['html', 'htm'].includes(ext)) return 'html';
-  // Only the formats the Office Online viewer can actually render. key/odt/rtf fall
-  // through to 'other' → a link, since the viewer would show a broken embed.
-  if (['ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'].includes(ext)) return 'office';
   return 'other';
 }
 

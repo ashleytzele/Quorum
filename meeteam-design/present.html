@@ -3,48 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Present · Quorum</title>
+<title>Present · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=10">
-<script src="theme.js?v=2"></script>
+<link rel="stylesheet" href="styles.css?v=8">
 <style>
-  /* Content displayed BIG. Colors follow the theme-aware stage tokens (--st-*). */
-  .pre-md { text-align:left; font-size:3.1vmin; line-height:1.5; max-width:80vw; margin:1.6vmin auto 0; max-height:80vh; overflow-y:auto; overscroll-behavior:contain; padding-right:1vmin; }
-  .pre-md::-webkit-scrollbar { width:9px; } .pre-md::-webkit-scrollbar-thumb { background:rgba(128,128,150,.4); border-radius:8px; }
-  .pre-md h1,.pre-md h2,.pre-md h3 { margin:.5em 0 .3em; font-weight:700; letter-spacing:-.01em; }
-  .pre-md h1 { font-size:4.4vmin; } .pre-md h2 { font-size:3.6vmin; } .pre-md h3 { font-size:3vmin; }
+  /* Rendered submission content on slides, inheriting the slide's light-on-dark text */
+  .pre-md { text-align:left; font-size:2.5vmin; line-height:1.5; max-width:74vw; margin:2.4vmin auto 0; }
+  .pre-md h1,.pre-md h2,.pre-md h3 { margin:.5em 0 .3em; }
   .pre-md ul,.pre-md ol { padding-left:1.3em; margin:.3em 0; }
-  .pre-md li { margin:.3em 0; }
-  .pre-md hr { border:none; border-top:1px solid var(--st-line); margin:.8em 0; }
+  .pre-md li { margin:.2em 0; }
+  .pre-md hr { border:none; border-top:1px solid rgba(255,255,255,.25); margin:.8em 0; }
   .pre-md a { color:inherit; }
-  .present-media { max-width:88vw; max-height:80vh; object-fit:contain; border-radius:1vmin; }
-  .present-pdf, .present-frame { width:88vw; height:82vh; border:none; border-radius:1vmin; background:#fff; }
-  .present-link { font-size:3vmin; text-decoration:underline; color:inherit; }
-  /* Per-file caption on a slide. Images pair adaptively: .wide (landscape) = side-by-side, else stacked. */
-  .capslide { display:flex; flex-direction:column; align-items:center; gap:3vmin; width:100%; }
-  .capslide.wide { flex-direction:row; align-items:center; gap:5vmin; text-align:left; }
-  .capslide .present-media { max-height:70vh; max-width:88vw; }
-  .capslide.wide .present-media { max-width:60vw; max-height:80vh; flex:none; }
-  .capnote { font-size:3vmin; line-height:1.5; max-width:68ch; color:var(--st-ink); text-align:left; }
-  .capslide.wide .capnote { flex:1; max-width:none; }
-  .capnote-head { margin-bottom:3vmin; color:var(--st-dim); }
-  .capnote p { margin:.2em 0; } .capnote h1,.capnote h2,.capnote h3 { font-size:3.3vmin; font-weight:700; margin:0 0 .4em; }
+  .present-media { max-width:82vw; max-height:70vh; object-fit:contain; border-radius:1vmin; }
+  .present-pdf { width:82vw; height:74vh; border:none; border-radius:1vmin; background:#fff; }
+  .present-link { font-size:2.6vmin; text-decoration:underline; color:inherit; }
   /* Pre-flight "what to present" checklist */
   #preflight{position:fixed;inset:0;display:grid;place-items:center;padding:5vmin;overflow:auto;z-index:50;}
-  #preflight{background:var(--bg);}
-  .pf-card{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);max-width:620px;width:100%;padding:26px 30px;max-height:86vh;overflow:auto;box-shadow:var(--shadow-lg);font-family:var(--font);}
-  .pf-title{font-size:1.25rem;font-weight:700;margin:0 0 3px;letter-spacing:-.01em;}
-  .pf-sub{color:var(--text-2);font-size:0.875rem;margin:0 0 16px;}
-  .pf-team{font-weight:700;margin:15px 0 4px;font-size:0.6875rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);}
+  .pf-card{background:#fff;color:#161922;border-radius:16px;max-width:620px;width:100%;padding:26px 30px;max-height:86vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.45);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;}
+  .pf-title{font-size:20px;font-weight:700;margin:0 0 3px;}
+  .pf-sub{color:#565d6e;font-size:14px;margin:0 0 16px;}
+  .pf-team{font-weight:600;margin:15px 0 4px;font-size:13.5px;color:#3b4dd8;}
   .pf-item{display:flex;align-items:center;gap:11px;padding:6px 10px;border-radius:8px;}
-  .pf-item:hover{background:var(--muted-bg);}
-  .pf-item input{width:16px;height:16px;flex:none;accent-color:var(--accent);}
-  .pf-item label{font-size:0.875rem;cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
+  .pf-item:hover{background:#f5f6f9;}
+  .pf-item input{width:16px;height:16px;flex:none;accent-color:#3b4dd8;}
+  .pf-item label{font-size:14px;cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pf-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px;}
-  .pf-select-all{font-size:0.8125rem;color:var(--accent-700);background:none;border:none;cursor:pointer;font-family:inherit;font-weight:600;}
-  .pf-start{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 20px;font-weight:600;font-size:0.875rem;cursor:pointer;font-family:inherit;}
-  .pf-start:hover{background:var(--accent-600);}
+  .pf-select-all{font-size:13px;color:#3b4dd8;background:none;border:none;cursor:pointer;font-family:inherit;}
+  .pf-start{background:#3b4dd8;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;}
+  .pf-start:hover{background:#3140bd;}
 </style>
 </head>
 <body class="present-body">
@@ -52,7 +39,6 @@
 <div id="preflight"></div>
 
 <div class="reveal" id="deck">
-  <h1 class="sr-only">Meeting presentation</h1>
   <div class="topline">
     <span class="brand-sm">
       <svg class="mark" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
@@ -60,9 +46,9 @@
         <circle cx="12.6" cy="16" r="5.4" fill="#fff"/>
         <circle cx="19.4" cy="16" r="5.4" fill="#fff" fill-opacity=".55"/>
       </svg>
-      Quorum
+      MeeTeam
     </span>
-    <span class="counter" id="counter" aria-live="polite" aria-label="Slide 1 of 1">01 / 01</span>
+    <span class="counter" id="counter">01 / 01</span>
   </div>
 
   <div class="slides" id="slides"></div>
@@ -70,7 +56,7 @@
   <div class="progress" id="progress"></div>
 
   <div class="hint">
-    <kbd>←</kbd> <kbd>→</kbd> navigate &nbsp;·&nbsp; <kbd>L</kbd> light/dark &nbsp;·&nbsp; <kbd>F</kbd> fullscreen &nbsp;·&nbsp; <kbd>Esc</kbd> exit
+    <kbd>←</kbd> <kbd>→</kbd> navigate &nbsp;·&nbsp; <kbd>F</kbd> fullscreen &nbsp;·&nbsp; <kbd>Esc</kbd> exit
   </div>
 
   <div class="nav">
@@ -101,7 +87,7 @@
   const badge = (name, color) =>
     '<span style="display:inline-grid;place-items:center;width:2.6vmin;height:2.6vmin;border-radius:.6vmin;background:' +
     color + ';color:#fff;font-size:1.4vmin;">' + initials(name) + '</span> ' + esc(name);
-  const slide = (inner) => '<section tabindex="-1"><div class="inner">' + inner + '</div></section>';
+  const slide = (inner) => '<section><div class="inner">' + inner + '</div></section>';
 
   /* ---------- Collect selectable groups (each team's pre-note + files) ---------- */
   const groups = [];
@@ -141,7 +127,7 @@
     groups.forEach(function(g, gi){
       html += '<div class="pf-team">' + (isVip ? 'Meeting content' : esc(g.team.name)) + '</div>';
       if (g.pre.trim()) html += pfItem(gi + '-pre', 'Pre-meeting note');
-      g.files.forEach(function(f, fi){ html += pfItem(gi + '-f' + fi, esc(f.file_name) + (f.url ? ' <span style="color:var(--text-3);">· link</span>' : '')); });
+      g.files.forEach(function(f, fi){ html += pfItem(gi + '-f' + fi, esc(f.file_name) + (f.url ? ' <span style="color:#8a90a1;">· link</span>' : '')); });
     });
     html += '<div class="pf-actions"><button class="pf-select-all" id="pf-toggle-all" type="button">Deselect all</button>' +
       '<button class="pf-start" id="pf-start" type="button">Start presentation ▶</button></div></div>';
@@ -177,54 +163,26 @@
             isVip
               ? ('<div class="eyebrow">' + esc(meeting.title || 'Meeting') + '</div>' + '<div class="pre-md">' + md.render(g.pre) + '</div>')
               : ('<div class="eyebrow">' + badge(g.team.name, g.color) + '</div>' +
+                 '<h2 class="s-head">' + esc(g.team.name) + '</h2>' +
                  '<div class="pre-md">' + md.render(g.pre) + '</div>')
           ));
         }
         for (const f of includedFiles){
-          // Minimal header: small team label, no filename (VIP has no team → no header).
-          const head = isVip ? '' : ('<div class="eyebrow">' + badge(g.team.name, g.color) + '</div>');
-          // Per-file caption: pairs with an image inside .capslide (adaptive); sits as a header above embeds/links.
-          const hasCap = f.caption && f.caption.trim();
-          const capNote = hasCap ? '<div class="capnote">' + md.render(f.caption) + '</div>' : '';
-          const capHead = hasCap ? '<div class="capnote capnote-head">' + md.render(f.caption) + '</div>' : '';
-          if (f.url){ parts.push(slide(head + capHead + '<a class="present-link" href="' + esc(f.url) + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>')); continue; }
+          const head = isVip
+            ? ('<div class="eyebrow">' + esc(f.file_name) + '</div>')
+            : ('<div class="eyebrow">' + badge(g.team.name, g.color) + ' · ' + esc(f.file_name) + '</div>');
+          if (f.url){ parts.push(slide(head + '<a class="present-link" href="' + esc(f.url) + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>')); continue; }
           const kind = classifyFile(f.file_name);
-          let url = '#';
-          // One bad file must never kill the whole deck — fall back to a link, keep presenting.
-          try {
-            url = await signedUrl(f.file_path);
-            if (kind === 'image') parts.push(slide(head + '<div class="capslide"><img class="present-media" src="' + url + '" alt="' + esc(f.file_name) + '">' + capNote + '</div>'));
-            else if (kind === 'pdf') parts.push(slide(head + capHead + '<embed class="present-pdf" src="' + url + '" type="application/pdf">'));
-            else if (kind === 'markdown'){
-              const dl = await supa.storage.from('submissions').download(f.file_path);
-              const text = dl.data ? await dl.data.text() : '';
-              parts.push(slide(head + capHead + '<div class="pre-md">' + md.render(text) + '</div>'));
-            }
-            else if (kind === 'html'){
-              // Storage may serve an uploaded .html as text/plain (shows the code, not the page).
-              // Re-wrap the bytes as text/html and frame that object URL so it renders as a page.
-              const dl = await supa.storage.from('submissions').download(f.file_path);
-              const src = dl.data ? URL.createObjectURL(new Blob([dl.data], { type: 'text/html' })) : url;
-              parts.push(slide(head + capHead + '<iframe class="present-frame" src="' + src + '" title="' + esc(f.file_name) + '" sandbox="allow-scripts allow-popups allow-forms"></iframe>'));
-            }
-            // ponytail: browsers can't render pptx/office natively — Microsoft's Office viewer fetches the (signed) URL, so the file transits a third party. Swap this line back to the link fallback below if that's not acceptable.
-            else if (kind === 'office') parts.push(slide(head + capHead + '<iframe class="present-frame" src="https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url) + '" title="' + esc(f.file_name) + '"></iframe>'));
-            else parts.push(slide(head + capHead + '<a class="present-link" href="' + esc(url) + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>'));
-          } catch (err) {
-            console.error('present: could not render ' + f.file_name, err);
-            parts.push(slide(head + capHead + '<a class="present-link" href="' + esc(url) + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>'));
-          }
+          const url = await signedUrl(f.file_path);
+          if (kind === 'image') parts.push(slide(head + '<img class="present-media" src="' + url + '" alt="' + esc(f.file_name) + '">'));
+          else if (kind === 'pdf') parts.push(slide(head + '<embed class="present-pdf" src="' + url + '" type="application/pdf">'));
+          else if (kind === 'markdown'){ const text = await (await fetch(url)).text(); parts.push(slide(head + '<div class="pre-md">' + md.render(text) + '</div>')); }
+          else parts.push(slide(head + '<a class="present-link" href="' + esc(url) + '" target="_blank" rel="noopener">Open ' + esc(f.file_name) + '</a>'));
         }
       }
       if (parts.length === 1) parts.push(slide('<div class="s-sub">Nothing selected to present.</div>'));
     }
     document.getElementById('slides').innerHTML = parts.join('');
-    // Adaptive image+caption: clearly-landscape images go side-by-side, others stay stacked.
-    document.querySelectorAll('.capslide').forEach(function(cs){
-      const img = cs.querySelector('img'); if (!img) return;
-      const apply = function(){ cs.classList.toggle('wide', img.naturalWidth > img.naturalHeight * 1.15); };
-      if (img.complete && img.naturalWidth) apply(); else img.addEventListener('load', apply);
-    });
     pf.style.display = 'none';
     setupNav();
   }
@@ -241,10 +199,8 @@
     function show(n){
       i = Math.max(0, Math.min(total - 1, n));
       slides.forEach((sec, idx) => sec.classList.toggle('is-active', idx === i));
-      if (slides[i]) slides[i].focus({ preventScroll: true });   // move focus so screen readers read the slide's content
       counter.textContent = pad(i + 1) + ' / ' + pad(total);
-      counter.setAttribute('aria-label', 'Slide ' + (i + 1) + ' of ' + total);
-      progress.style.transform = 'scaleX(' + ((i + 1) / total) + ')';
+      progress.style.width = ((i + 1) / total * 100) + '%';
     }
     const next = () => show(i + 1), prev = () => show(i - 1);
     function toggleFs(){
@@ -258,7 +214,6 @@
         case 'Home': show(0); break;
         case 'End': show(total - 1); break;
         case 'f': case 'F': e.preventDefault(); toggleFs(); break;
-        case 'l': case 'L': if (window.toggleTheme) window.toggleTheme(); break;
         case 'Escape': if(!document.fullscreenElement){ location.href = 'admin.html'; } break;
       }
     });

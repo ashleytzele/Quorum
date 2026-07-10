@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Product Team · Quorum</title>
+<title>Product Team · MeeTeam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<script src="theme.js?v=2"></script>
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 <div class="page">
@@ -20,7 +19,7 @@
           <circle cx="12.6" cy="16" r="5.4" fill="#fff"/>
           <circle cx="19.4" cy="16" r="5.4" fill="#fff" fill-opacity=".55"/>
         </svg>
-        <span>Quorum</span>
+        <span>MeeTeam</span>
       </a>
       <div class="context">
         <span class="team" id="team-name">Product Team</span>
@@ -37,7 +36,7 @@
     <div class="container">
       <div class="grid-head">
         <div>
-          <h1 class="page-title">Meeting workspace</h1>
+          <div class="page-title">Meeting workspace</div>
           <div class="page-sub">Prepare what you're presenting, then capture notes for the minutes.</div>
         </div>
       </div>
@@ -91,7 +90,7 @@
               <div class="dztitle">Drop documents or pictures here</div>
               <div class="dzsub">or <span class="browse">browse your device</span> · PDF, DOCX, PPTX, HTML, PNG, JPG</div>
             </div>
-            <input type="file" id="file-input" multiple hidden accept=".md,.markdown,.txt,.pdf,.doc,.docx,.rtf,.odt,.ppt,.pptx,.key,.html,.htm,.png,.jpg,.jpeg,.gif,.webp">
+            <input type="file" id="file-input" multiple hidden>
 
             <div class="link-add" style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
               <input class="input" type="url" id="link-url" placeholder="…or paste a link  (https://…)" style="flex:2;min-width:200px;">
@@ -154,10 +153,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <script src="config.js"></script>
 <script src="supa.js?v=3"></script>
-<script src="ui.js?v=1"></script>
 <script src="lib.js?v=2"></script>
 <script>
 (async function(){
@@ -224,9 +221,33 @@
 
   /* ---------- Markdown renderer (from the design) ---------- */
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  // Unified on markdown-it (same engine as admin/minutes/present/history) so a note
-  // renders identically wherever it is shown.
-  const md = window.markdownit({ html: false, linkify: true, breaks: true });
+  function inline(s){
+    s = s.replace(/`([^`]+)`/g, function(_,c){ return '<code>' + c + '</code>'; });
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^\*])\*([^*\s][^*]*?)\*/g, '$1<em>$2</em>');
+    s = s.replace(/\b_([^_]+)_\b/g, '<em>$1</em>');
+    s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  }
+  function md(src){
+    var lines = String(src).replace(/\r\n/g,'\n').split('\n');
+    var out = [], para = [], i = 0;
+    function flushP(){ if(para.length){ out.push('<p>' + para.map(function(l){ return inline(esc(l)); }).join('<br>') + '</p>'); para = []; } }
+    while(i < lines.length){
+      var line = lines[i];
+      if(/^```/.test(line)){ flushP(); var code = []; i++; while(i < lines.length && !/^```/.test(lines[i])){ code.push(lines[i]); i++; } i++; out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>'); continue; }
+      if(/^\s*$/.test(line)){ flushP(); i++; continue; }
+      var h = line.match(/^(#{1,3})\s+(.*)$/);
+      if(h){ flushP(); var lv = h[1].length; out.push('<h'+lv+'>'+inline(esc(h[2]))+'</h'+lv+'>'); i++; continue; }
+      if(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)){ flushP(); out.push('<hr>'); i++; continue; }
+      if(/^\s*>/.test(line)){ flushP(); var q = []; while(i < lines.length && /^\s*>/.test(lines[i])){ q.push(lines[i].replace(/^\s*>\s?/,'')); i++; } out.push('<blockquote>' + q.map(function(l){ return inline(esc(l)); }).join('<br>') + '</blockquote>'); continue; }
+      if(/^\s*[-*+]\s+/.test(line)){ flushP(); var items = []; while(i < lines.length && /^\s*[-*+]\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*[-*+]\s+/,'')); i++; } out.push('<ul>' + items.map(function(t){ return '<li>' + inline(esc(t)) + '</li>'; }).join('') + '</ul>'); continue; }
+      if(/^\s*\d+\.\s+/.test(line)){ flushP(); var oi = []; while(i < lines.length && /^\s*\d+\.\s+/.test(lines[i])){ oi.push(lines[i].replace(/^\s*\d+\.\s+/,'')); i++; } out.push('<ol>' + oi.map(function(t){ return '<li>' + inline(esc(t)) + '</li>'; }).join('') + '</ol>'); continue; }
+      para.push(line); i++;
+    }
+    flushP();
+    return out.join('\n');
+  }
 
   /* ---------- Save-status helper (from the design) ---------- */
   function saver(el){
@@ -250,7 +271,7 @@
   /* ---------- Editors (autosave to Supabase) ---------- */
   function bindEditor(ta, prev, statusEl, value, saveFn){
     var st = saver(statusEl), timer;
-    function render(){ var v = ta.value.trim(); prev.innerHTML = v ? md.render(ta.value) : '<p class="md-empty">Nothing to preview yet.</p>'; }
+    function render(){ var v = ta.value.trim(); prev.innerHTML = v ? md(ta.value) : '<p class="md-empty">Nothing to preview yet.</p>'; }
     ta.addEventListener('input', function(){
       render(); st.saving();
       clearTimeout(timer);
@@ -299,8 +320,7 @@
     var isLink = !!f.url;
     var li = document.createElement('li'); li.className = 'file-item';
     var icon = isLink ? ICON_LINK : (isImage(f.file_name) ? ICON_IMG : ICON_DOC);
-    li.innerHTML = '<div class="file-main"><span class="fico">' + icon + '</span><span class="fmeta"><span class="fname"></span><span class="fsize"></span></span><button class="file-remove" type="button">Remove</button></div>' +
-      '<input class="file-caption" type="text" placeholder="Add a note for this file…" aria-label="Caption for ' + esc(f.file_name || 'file') + '">';
+    li.innerHTML = '<span class="fico">' + icon + '</span><span class="fmeta"><span class="fname"></span><span class="fsize"></span></span><button class="file-remove" type="button">Remove</button>';
     var nameEl = li.querySelector('.fname');
     if (isLink){
       var a = document.createElement('a'); a.href = f.url; a.target = '_blank'; a.rel = 'noopener';
@@ -309,15 +329,6 @@
     } else {
       nameEl.textContent = f.file_name;
     }
-    var capEl = li.querySelector('.file-caption'); capEl.value = f.caption || '';
-    var capTimer;
-    capEl.addEventListener('input', function(){
-      clearTimeout(capTimer);
-      capTimer = setTimeout(async function(){
-        var res = await supa.from('submissions').update({ caption: capEl.value }).eq('id', f.id);
-        if (res.error) { console.error(res.error); toast('Couldn’t save the caption — please try again.', 'error'); }
-      }, 600);
-    });
     li.querySelector('.file-remove').addEventListener('click', async function(){
       if (!isLink) await supa.storage.from('submissions').remove([f.file_path]);
       await supa.from('submissions').delete().eq('id', f.id);
@@ -325,29 +336,21 @@
     });
     list.appendChild(li);
   }
-  // A placeholder row shown the instant a file starts uploading, replaced by the real row when stored.
-  function addPendingRow(name){
-    var li = document.createElement('li'); li.className = 'file-item pending';
-    li.innerHTML = '<div class="file-main"><span class="fico">' + ICON_DOC + '</span><span class="fmeta"><span class="fname">' + esc(name) + '</span><span class="fsize">Uploading…</span></span></div>';
-    list.appendChild(li); return li;
-  }
   async function uploadFiles(files){
     var rejected = 0;
     for (var k = 0; k < files.length; k++){
       var file = files[k];
       if(!isAccepted(file.name)){ rejected++; continue; }
-      var pending = addPendingRow(file.name);   // instant feedback while it uploads
       var path = meeting.id + '/' + effectiveTeamId + '/' + Date.now() + '-' + file.name;
       var up = await supa.storage.from('submissions').upload(path, file);
-      if(up.error){ pending.remove(); console.error(up.error); toast('Couldn’t upload “' + file.name + '” — please try again.', 'error'); continue; }
+      if(up.error){ alert(up.error.message); continue; }
       var ins = await supa.from('submissions').insert({
         meeting_id: meeting.id, team_id: effectiveTeamId, file_path: path, file_name: file.name, mime: file.type
       }).select().single();
-      pending.remove();
       if(ins.data) addFileRow(ins.data);
     }
     updateCount();
-    if(rejected) toast(rejected + ' file(s) skipped — only documents and pictures are allowed.', 'error');
+    if(rejected) alert(rejected + ' file(s) skipped — only documents and pictures are allowed.');
   }
   input.addEventListener('change', function(){ uploadFiles(input.files); input.value = ''; });
   zone.addEventListener('click', function(){ input.click(); });
@@ -362,11 +365,11 @@
   async function addLink(){
     var url = linkUrl.value.trim();
     if(!url) return;
-    if(!/^https?:\/\//i.test(url)){ toast('Please enter a full URL starting with http:// or https://', 'error'); return; }
+    if(!/^https?:\/\//i.test(url)){ alert('Please enter a full URL starting with http:// or https://'); return; }
     var ins = await supa.from('submissions').insert({
       meeting_id: meeting.id, team_id: effectiveTeamId, url: url, file_name: linkLabel.value.trim() || url, mime: 'link'
     }).select().single();
-    if(ins.error){ console.error(ins.error); toast('Couldn’t add the link — please try again.', 'error'); return; }
+    if(ins.error){ alert(ins.error.message); return; }
     addFileRow(ins.data); updateCount();
     linkUrl.value = ''; linkLabel.value = '';
   }
@@ -408,13 +411,7 @@
 
   /* ---------- Embedded workspace: report height so the admin dashboard can size the iframe ---------- */
   if (embed) {
-    // Measure the CONTENT height (.page), not documentElement.scrollHeight — the latter is >= the
-    // iframe's own height, so with admin's "+8" it would grow 8px on every keystroke (a feedback loop).
-    function postH(){ try {
-      var root = document.querySelector('.page');
-      var h = root ? Math.ceil(root.getBoundingClientRect().height) : document.body.scrollHeight;
-      parent.postMessage({ mtHeight: h }, '*');
-    } catch (e) {} }
+    function postH(){ try { parent.postMessage({ mtHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {} }
     window.addEventListener('load', postH);
     document.addEventListener('input', postH);
     document.addEventListener('click', function(){ setTimeout(postH, 300); });
