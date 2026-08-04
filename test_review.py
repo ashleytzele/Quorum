@@ -1,5 +1,7 @@
 import json
-from review import number_lines, build_prompt, read_notes
+import os
+from pathlib import Path
+from review import number_lines, build_prompt, read_notes, needs_transcribe
 
 
 def test_number_lines():
@@ -38,3 +40,27 @@ def test_build_prompt_omits_notes_block_when_empty():
 
 def test_read_notes_empty_returns_empty_string():
     assert read_notes([]) == ""
+
+
+def test_needs_transcribe(tmp_path):
+    audio = tmp_path / "a.m4a"
+    audio.write_text("x")
+    transcript = tmp_path / "a.manglish.txt"
+
+    # transcript missing -> must transcribe
+    assert needs_transcribe(audio, transcript) is True
+
+    # transcript newer than audio -> skip
+    transcript.write_text("y")
+    newer = audio.stat().st_mtime + 10
+    os.utime(transcript, (newer, newer))
+    assert needs_transcribe(audio, transcript) is False
+
+    # transcript older than audio -> must transcribe
+    older = audio.stat().st_mtime - 10
+    os.utime(transcript, (older, older))
+    assert needs_transcribe(audio, transcript) is True
+
+    # audio gone, transcript present -> trust transcript, skip
+    audio.unlink()
+    assert needs_transcribe(audio, transcript) is False
