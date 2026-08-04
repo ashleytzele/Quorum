@@ -32,17 +32,27 @@ meeting's minutes.
   `.env` beside `OPENAI_API_KEY`. Acceptable because it's the admin's own machine
   and the key is never committed.
 
-## Quorum data model (as found)
+## Quorum data model (confirmed against MeeTeam schema doc)
 
-- `submissions` — per team, per meeting: `content` (pre-meeting notes text) and
-  file(s) at `file_path` in the `submissions` storage bucket. **This is the
-  ground-truth input.** (Confirm exact columns during implementation:
-  `meeting_id`, `team_id`, `content`, `file_path`.)
-- `meetings` — `id`, `meeting_date`, `is_active` (false = archived to History),
-  `minutes_final` (the finished minutes markdown), `model` (`admin` = VIP), plus
-  `org`/`title`. **This is the output target.**
+The pre-meeting notes TEXT and the pre-meeting FILES live in two different
+tables — an important correction from the first draft:
+
+- `notes` — `id`, `meeting_id`, `team_id`, **`pre_note text`** (the pre-meeting
+  note → the GROUND-TRUTH text input), `content text` (during-meeting notes the
+  admin would otherwise hand-assemble into minutes — NOT used as input; the
+  review replaces it), `submitted bool`, `unique(meeting_id, team_id)`.
+- `submissions` — `id`, `meeting_id`, `team_id`, `file_path`, `file_name`,
+  `mime`, `url` (set when `mime='link'`), `created_at`. Pre-meeting FILES + LINKS.
+  Files live in the private `submissions` storage bucket.
+- `meetings` — `id`, `title`, `meeting_date`, `org`, `is_active` (false =
+  archived to History), `minutes_final text` (the finished minutes markdown),
+  `created_at`, `model` (`admin` = VIP). **The output target.**
 - Finalizing in the app = `update meetings set minutes_final=…, is_active=false`.
   The publish step does exactly this.
+
+So the review's ground-truth INPUT = every team's `notes.pre_note` for the
+meeting, PLUS the text of each `submissions` file (downloaded + extracted) and
+each link's URL. `teams.name` labels each team's block.
 
 ## Scope of Phase 2
 
@@ -54,14 +64,16 @@ Thin Supabase helpers, isolated so `review.py`'s core stays free of network I/O.
 Uses the `supabase` Python client with `SUPABASE_URL` + `SUPABASE_SERVICE_KEY`
 from the environment / `.env`.
 
-- `fetch_notes(meeting_id: str) -> str` — read all `submissions` rows for the
-  meeting; concatenate each row's `content`, and download each `file_path` from
-  the `submissions` bucket and extract its text via the existing markitdown path.
-  Returns one combined ground-truth notes string (same shape `read_notes`
-  produces), each piece under a `--- <team or filename> ---` header.
+- `fetch_notes(meeting_id: str) -> str` — read all `notes` rows for the meeting
+  and collect each team's `pre_note` (labeled with `teams.name`); read all
+  `submissions` rows, download each `file_path` from the `submissions` bucket and
+  extract its text via the existing markitdown path, and include each link
+  submission's `url`. Returns one combined ground-truth notes string (same shape
+  `read_notes` produces), each piece under a `--- <team / file_name> ---` header.
 - `publish_minutes(meeting_id: str, markdown: str) -> None` — `update meetings`
   set `minutes_final = markdown`, `is_active = false` where `id = meeting_id`.
-- `_combine_submissions(rows, file_texts) -> str` — the PURE assembly step,
+- `_combine_inputs(pre_notes, file_texts, links) -> str` — the PURE assembly
+  step (team pre_notes + extracted file texts + link URLs → one labeled string),
   unit-testable without network.
 
 ### `review.py` — two new modes (additive; existing CLI unchanged)
@@ -104,8 +116,9 @@ review.py --publish <id> weekly_review_<date>.md   # push to minutes_final + arc
   meeting is already archived, still allow overwriting the minutes.
 
 ## Testing / check
-- `_combine_submissions(rows, file_texts)` — pure; unit-test that it merges
-  content + file text with headers and handles empty inputs.
+- `_combine_inputs(pre_notes, file_texts, links)` — pure; unit-test that it
+  merges team pre_notes + file text + link URLs with headers and handles empty
+  inputs.
 - A `--dry-run` on `--meeting` should print the assembled prompt WITHOUT
   publishing and (to avoid a live Supabase call in tests) is exercised with
   the fetch layer stubbed.
@@ -115,7 +128,7 @@ review.py --publish <id> weekly_review_<date>.md   # push to minutes_final + arc
   confirm it appears in Quorum History.
 
 ## Open items
-- Confirm exact `submissions` columns (`content`, `file_path`, and whether a row
-  can carry multiple files) against the live schema during implementation.
+- Whether to include only `submitted=true` `notes` rows, or all of them
+  (default: all rows that have a non-empty `pre_note`).
 - Whether `--meeting` should also accept extra local note files additively
   (low cost to allow; default: allow).
