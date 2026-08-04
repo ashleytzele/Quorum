@@ -21,6 +21,22 @@ OpenAI generation call.
 Output: `<template-stem>_<date>.md` (e.g. `weekly_review_2026-07-31.md`), or
 pass `-o out.md`.
 
+## Writing the notes
+Start each notes document with the **project name as the first heading**, e.g.
+`# DataAnalyzerProMax`, then the details. Good practice, but not a full fix.
+
+## Known limitation (verified 2026-08-04)
+`gpt-4o-mini` sometimes DROPS a whole project from the review — observed even
+when the project is clearly named in the notes and rich in detail. Best guess:
+it merges a project whose wording collides with another (e.g. a capture "Node"
+folded into another project's "nodes"). Tested and NOT fixed by: naming the
+project, strengthening the template's completeness rules, or switching to
+`gpt-4o` (which dropped it too). The reliable fix is a pipeline change —
+generate one project at a time, or a list-projects-then-write two-pass — which
+is follow-up work, not done yet. Until then: **eyeball the review against your
+notes and check no project is missing.** `gpt-4o-mini` is the default and is as
+good as `gpt-4o` here, so there's no cheap model upgrade that helps.
+
 ## Pieces
 - `retranscribe.sh` — local whisper.cpp + glossary; writes `<audio>.manglish.txt`.
 - `glossary.txt` — whisper proper-noun prompt (keep < ~900 chars).
