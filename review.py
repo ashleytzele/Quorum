@@ -2,8 +2,16 @@
 """Recording + notes -> structured review (weekly or interview) via local
 whisper + the OpenAI API. See docs/superpowers/specs for the design."""
 
+import argparse
+import datetime
+import json
+import os
 import subprocess
+import sys
 from pathlib import Path
+
+MODEL = "gpt-4o-mini"  # "the mini" — confirm exact id from OpenAI dashboard
+DEFAULT_TEMPLATE = "weekly_review.json"
 
 
 def number_lines(text: str) -> str:
@@ -72,3 +80,53 @@ def transcribe(recording: str, clean: bool) -> str:
         cmd = [str(script)] + (["--clean"] if clean else []) + [str(recording)]
         subprocess.run(cmd, check=True)
     return transcript.read_text()
+
+
+def call_openai(messages: list[dict], model: str) -> str:
+    from openai import OpenAI
+    client = OpenAI()  # reads OPENAI_API_KEY from env
+    resp = client.chat.completions.create(model=model, messages=messages)
+    return resp.choices[0].message.content
+
+
+def _date_from(recording: str) -> str:
+    audio = _audio_path(recording)
+    target = audio if audio.exists() else Path(recording)
+    return datetime.date.fromtimestamp(target.stat().st_mtime).isoformat()
+
+
+def main(argv=None) -> None:
+    ap = argparse.ArgumentParser(description="Recording + notes -> markdown review.")
+    ap.add_argument("recording", help="audio file or Meetily recording folder")
+    ap.add_argument("notes", nargs="*", help="pre-meeting .docx/.pptx/.pdf files")
+    ap.add_argument("-t", "--template",
+                    default=str(Path(__file__).resolve().parent / DEFAULT_TEMPLATE))
+    ap.add_argument("--clean", action="store_true", help="denoise before transcribing")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="print the prompt and stop; no OpenAI call")
+    ap.add_argument("-o", "--out", help="output .md path")
+    ap.add_argument("--model", default=MODEL)
+    args = ap.parse_args(argv)
+
+    if not args.dry_run and not os.environ.get("OPENAI_API_KEY"):
+        sys.exit("OPENAI_API_KEY not set. export it, or put it in a .env you source.")
+
+    template = json.loads(Path(args.template).read_text())
+    transcript = transcribe(args.recording, args.clean)
+    notes = read_notes(args.notes)
+    messages = build_prompt(template, transcript, notes)
+
+    if args.dry_run:
+        for m in messages:
+            print(f"\n===== {m['role'].upper()} =====\n{m['content']}")
+        return
+
+    result = call_openai(messages, args.model)
+    stem = Path(args.template).stem
+    out = args.out or f"{stem}_{_date_from(args.recording)}.md"
+    Path(out).write_text(result)
+    print(f"wrote {out}")
+
+
+if __name__ == "__main__":
+    main()

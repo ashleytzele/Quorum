@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from review import number_lines, build_prompt, read_notes, needs_transcribe
+from review import number_lines, build_prompt, read_notes, needs_transcribe, main
 
 
 def test_number_lines():
@@ -64,3 +64,23 @@ def test_needs_transcribe(tmp_path):
     # audio gone, transcript present -> trust transcript, skip
     audio.unlink()
     assert needs_transcribe(audio, transcript) is False
+
+
+def test_dry_run_prints_prompt_without_api_key(tmp_path, capsys, monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    template = tmp_path / "t.json"
+    template.write_text(json.dumps({
+        "name": "T", "description": "D",
+        "sections": [{"title": "X", "instruction": "i", "format": "string"}]}))
+    audio = tmp_path / "a.m4a"
+    audio.write_text("x")
+    transcript = tmp_path / "a.manglish.txt"
+    transcript.write_text("hello world")
+    newer = audio.stat().st_mtime + 10
+    os.utime(transcript, (newer, newer))   # fresh -> transcribe() won't shell out
+
+    main([str(audio), "-t", str(template), "--dry-run"])
+
+    out = capsys.readouterr().out
+    assert "SYSTEM" in out
+    assert "1: hello world" in out          # line-numbered transcript in the prompt
