@@ -1,5 +1,5 @@
 import json
-from review import number_lines, build_prompt
+from review import number_lines, build_prompt, read_notes
 
 
 def test_number_lines():
@@ -34,3 +34,7 @@ def test_build_prompt_omits_notes_block_when_empty():
     user = build_prompt(template, "line one", "")[1]["content"]
     assert "GROUND TRUTH" not in user
     assert "1: line one" in user
+
+
+def test_read_notes_empty_returns_empty_string():
+    assert read_notes([]) == ""

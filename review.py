@@ -36,3 +36,15 @@ def build_prompt(template: dict, transcript: str, notes: str) -> list[dict]:
 
     return [{"role": "system", "content": system},
             {"role": "user", "content": user}]
+
+
+def read_notes(paths: list[str]) -> str:
+    if not paths:
+        return ""
+    from markitdown import MarkItDown
+    md = MarkItDown()
+    chunks = []
+    for p in paths:
+        chunks.append(f"--- {Path(p).name} ---")
+        chunks.append(md.convert(p).text_content.strip())
+    return "\n\n".join(chunks)
