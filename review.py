@@ -18,7 +18,21 @@ def number_lines(text: str) -> str:
     return "\n".join(f"{i}: {ln}" for i, ln in enumerate(text.splitlines(), 1))
 
 
-def build_prompt(template: dict, transcript: str, notes: str) -> list[dict]:
+def _user_content(transcript: str, notes: str) -> str:
+    parts = []
+    if notes.strip():
+        parts.append(
+            "=== GROUND TRUTH: pre-meeting notes "
+            "(trust these over the transcript on any conflict) ===")
+        parts.append(notes.strip())
+        parts.append("")
+    parts.append("=== TRANSCRIPT (cite line numbers, e.g. (lines 12-18)) ===")
+    parts.append(number_lines(transcript))
+    return "\n".join(parts)
+
+
+def build_prompt(template: dict, transcript: str, notes: str,
+                 projects: list[str] | None = None) -> list[dict]:
     sys_parts = [
         template["description"],
         "",
@@ -30,21 +44,30 @@ def build_prompt(template: dict, transcript: str, notes: str) -> list[dict]:
         sys_parts.append(s["instruction"])
         if s.get("item_format"):
             sys_parts.append(f"Row/item format:\n{s['item_format']}")
+    if projects:
+        sys_parts.append(
+            "\nREQUIRED PROJECTS — output exactly one '### ' subsection for EACH "
+            "item below. Do NOT merge two of them together and do NOT drop any, "
+            "even if their wording overlaps (e.g. one project's 'node' vs "
+            "another's 'nodes'):")
+        sys_parts.extend(f"- {p}" for p in projects)
     system = "\n".join(sys_parts)
 
-    user_parts = []
-    if notes.strip():
-        user_parts.append(
-            "=== GROUND TRUTH: pre-meeting notes "
-            "(trust these over the transcript on any conflict) ===")
-        user_parts.append(notes.strip())
-        user_parts.append("")
-    user_parts.append("=== TRANSCRIPT (cite line numbers, e.g. (lines 12-18)) ===")
-    user_parts.append(number_lines(transcript))
-    user = "\n".join(user_parts)
-
     return [{"role": "system", "content": system},
-            {"role": "user", "content": user}]
+            {"role": "user", "content": _user_content(transcript, notes)}]
+
+
+def list_projects(enumerate_instruction: str, transcript: str, notes: str,
+                  model: str) -> list[str]:
+    """First pass: ask the model only to enumerate the distinct projects, so the
+    second pass can't quietly merge or drop one."""
+    system = (enumerate_instruction +
+              "\nRespond with ONLY the list, one item per line — no numbering, "
+              "no blank lines, no commentary.")
+    messages = [{"role": "system", "content": system},
+                {"role": "user", "content": _user_content(transcript, notes)}]
+    text = call_openai(messages, model)
+    return [ln.strip(" -*\t") for ln in text.splitlines() if ln.strip()]
 
 
 def read_notes(paths: list[str]) -> str:
@@ -114,7 +137,15 @@ def main(argv=None) -> None:
     template = json.loads(Path(args.template).read_text())
     transcript = transcribe(args.recording, args.clean)
     notes = read_notes(args.notes)
-    messages = build_prompt(template, transcript, notes)
+
+    # Two-pass: if the template asks to enumerate first (weekly review does,
+    # interviews don't), list the projects, then require one section per project.
+    projects = None
+    if template.get("enumerate") and not args.dry_run:
+        projects = list_projects(template["enumerate"], transcript, notes, args.model)
+        print(f"projects ({len(projects)}): {', '.join(projects)}")
+
+    messages = build_prompt(template, transcript, notes, projects)
 
     if args.dry_run:
         for m in messages:

@@ -38,6 +38,21 @@ def test_build_prompt_omits_notes_block_when_empty():
     assert "1: line one" in user
 
 
+def test_build_prompt_injects_required_projects():
+    template = {"name": "T", "description": "D",
+                "sections": [{"title": "X", "instruction": "i", "format": "string"}]}
+    system = build_prompt(template, "t", "", projects=["Alpha", "Beta [?]"])[0]["content"]
+    assert "REQUIRED PROJECTS" in system
+    assert "- Alpha" in system and "- Beta [?]" in system
+
+
+def test_build_prompt_no_required_block_without_projects():
+    template = {"name": "T", "description": "D",
+                "sections": [{"title": "X", "instruction": "i", "format": "string"}]}
+    system = build_prompt(template, "t", "")[0]["content"]
+    assert "REQUIRED PROJECTS" not in system
+
+
 def test_read_notes_empty_returns_empty_string():
     assert read_notes([]) == ""
 

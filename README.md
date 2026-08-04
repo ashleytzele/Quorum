@@ -21,21 +21,23 @@ OpenAI generation call.
 Output: `<template-stem>_<date>.md` (e.g. `weekly_review_2026-07-31.md`), or
 pass `-o out.md`.
 
-## Writing the notes
+## Writing the notes — the ONE habit that matters
 Start each notes document with the **project name as the first heading**, e.g.
-`# DataAnalyzerProMax`, then the details. Good practice, but not a full fix.
+`# DataAnalyzerProMax`, then the details. One document = one project.
 
-## Known limitation (verified 2026-08-04)
-`gpt-4o-mini` sometimes DROPS a whole project from the review — observed even
-when the project is clearly named in the notes and rich in detail. Best guess:
-it merges a project whose wording collides with another (e.g. a capture "Node"
-folded into another project's "nodes"). Tested and NOT fixed by: naming the
-project, strengthening the template's completeness rules, or switching to
-`gpt-4o` (which dropped it too). The reliable fix is a pipeline change —
-generate one project at a time, or a list-projects-then-write two-pass — which
-is follow-up work, not done yet. Until then: **eyeball the review against your
-notes and check no project is missing.** `gpt-4o-mini` is the default and is as
-good as `gpt-4o` here, so there's no cheap model upgrade that helps.
+This is not optional polish. The weekly template runs a **two-pass** generation
+(first the model lists the projects, then writes one section each — see the
+`enumerate` key in `weekly_review.json`), which stops projects being merged or
+fragmented. But the enumerate pass can only keep a project it can NAME. Verified
+on 2026-07-31 with `gpt-4o-mini`:
+
+- unnamed project doc → still dropped or shattered into feature-fragments
+- **named project doc + two-pass → all 5 projects kept, correctly** ✅
+
+Each run prints `projects (N): ...` before writing — glance at it. If a project
+is missing or a feature is masquerading as a project, that's your cue to fix the
+heading in that notes doc. `gpt-4o-mini` is the default and is as good as
+`gpt-4o` here, so no cheap model upgrade helps — naming does.
 
 ## Pieces
 - `retranscribe.sh` — local whisper.cpp + glossary; writes `<audio>.manglish.txt`.
