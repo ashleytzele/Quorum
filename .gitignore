@@ -1,0 +1,10 @@
+# Large binaries — never commit
+*.m4a
+*.wav
+*.bin
+
+# Secrets
+.env
+
+# macOS
+.DS_Store
