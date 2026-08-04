@@ -1,2 +1,2 @@
 openai
-markitdown
+markitdown[docx,pptx,pdf]
