@@ -42,11 +42,16 @@ reuses the tools already here.
 
 ### The command
 ```
-review.py <recording.m4a> <note-file>... [--clean] [--dry-run] [-o out.md]
+review.py <recording.m4a> <note-file>... [-t template.json] [--clean] [--dry-run] [-o out.md]
 ```
 - `<recording.m4a>` — the Meetily recording (or a recording folder, same as
   `retranscribe.sh` accepts).
 - `<note-file>...` — one or more pre-meeting `.docx` / `.pptx` / `.pdf` files.
+  Optional — an interview run typically has none.
+- `-t template.json` — which summary template to use. Default `weekly_review.json`
+  (the weekly review). Pass `-t interview_review.json` for a candidate interview
+  record. The template is just a different set of sections/instructions; the
+  pipeline is identical.
 - `--clean` — passed straight through to `retranscribe.sh` (denoise/normalize).
 - `--dry-run` — build and print the full assembled prompt, then stop. No OpenAI
   call, no token spend. Used to eyeball the prompt and as the built-in check.
