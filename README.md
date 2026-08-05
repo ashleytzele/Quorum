@@ -21,6 +21,18 @@ OpenAI generation call.
 Output: `<template-stem>_<date>.md` (e.g. `weekly_review_2026-07-31.md`), or
 pass `-o out.md`.
 
+## Quorum integration (Phase 2)
+Set `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in `.env` (Supabase → Settings → API,
+the `service_role` key).
+
+    # generate from a Quorum meeting's submitted notes
+    ./review.py --meeting <meeting-id> "Meeting.m4a"
+
+    # ...read/edit the produced weekly_review_<date>.md, fixing any dropped project...
+
+    # publish the reviewed file as that meeting's minutes (archives it to History)
+    ./review.py --publish <meeting-id> weekly_review_<date>.md
+
 ## Writing the notes — the ONE habit that matters
 Start each notes document with the **project name as the first heading**, e.g.
 `# DataAnalyzerProMax`, then the details. One document = one project.

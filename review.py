@@ -118,9 +118,20 @@ def _date_from(recording: str) -> str:
     return datetime.date.fromtimestamp(target.stat().st_mtime).isoformat()
 
 
+def _fetch_via_quorum(meeting_id: str) -> str:
+    import quorum
+    return quorum.fetch_notes(meeting_id)
+
+
+def _publish_via_quorum(meeting_id: str, markdown: str) -> None:
+    import quorum
+    quorum.publish_minutes(meeting_id, markdown)
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="Recording + notes -> markdown review.")
-    ap.add_argument("recording", help="audio file or Meetily recording folder")
+    ap.add_argument("recording", nargs="?",
+                    help="audio/recording folder (generate), or the review .md (with --publish)")
     ap.add_argument("notes", nargs="*", help="pre-meeting .docx/.pptx/.pdf files")
     ap.add_argument("-t", "--template",
                     default=str(Path(__file__).resolve().parent / DEFAULT_TEMPLATE))
@@ -129,7 +140,22 @@ def main(argv=None) -> None:
                     help="print the prompt and stop; no OpenAI call")
     ap.add_argument("-o", "--out", help="output .md path")
     ap.add_argument("--model", default=MODEL)
+    ap.add_argument("--meeting", metavar="ID",
+                    help="Quorum meeting id: pull its pre-meeting notes as ground truth")
+    ap.add_argument("--publish", metavar="MEETING_ID",
+                    help="publish the given review .md to this meeting's minutes and archive it")
     args = ap.parse_args(argv)
+
+    if args.publish:
+        if not args.recording:
+            sys.exit("--publish needs the review .md file as the positional argument.")
+        text = Path(args.recording).read_text()
+        _publish_via_quorum(args.publish, text)
+        print(f"published {args.recording} -> meeting {args.publish} (archived)")
+        return
+
+    if not args.recording:
+        sys.exit("a recording (audio file or folder) is required.")
 
     if not args.dry_run and not os.environ.get("OPENAI_API_KEY"):
         sys.exit("OPENAI_API_KEY not set. export it, or put it in a .env you source.")
@@ -137,6 +163,9 @@ def main(argv=None) -> None:
     template = json.loads(Path(args.template).read_text())
     transcript = transcribe(args.recording, args.clean)
     notes = read_notes(args.notes)
+    if args.meeting:
+        qnotes = _fetch_via_quorum(args.meeting)
+        notes = (qnotes + "\n\n" + notes).strip() if notes.strip() else qnotes
 
     # Two-pass: if the template asks to enumerate first (weekly review does,
     # interviews don't), list the projects, then require one section per project.

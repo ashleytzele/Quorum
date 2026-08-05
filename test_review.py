@@ -1,5 +1,6 @@
 import json
 import os
+import pytest
 from pathlib import Path
 from review import number_lines, build_prompt, read_notes, needs_transcribe, main
 
@@ -99,3 +100,40 @@ def test_dry_run_prints_prompt_without_api_key(tmp_path, capsys, monkeypatch):
     out = capsys.readouterr().out
     assert "SYSTEM" in out
     assert "1: hello world" in out          # line-numbered transcript in the prompt
+
+
+def test_publish_mode_pushes_file(tmp_path, monkeypatch):
+    import review
+    md = tmp_path / "r.md"
+    md.write_text("# Minutes\nbody")
+    called = {}
+    monkeypatch.setattr(review, "_publish_via_quorum",
+                        lambda mid, text: called.update(mid=mid, text=text))
+    review.main([str(md), "--publish", "MID-1"])
+    assert called == {"mid": "MID-1", "text": "# Minutes\nbody"}
+
+
+def test_publish_mode_requires_a_file(monkeypatch):
+    import review
+    monkeypatch.setattr(review, "_publish_via_quorum", lambda mid, text: None)
+    with pytest.raises(SystemExit):
+        review.main(["--publish", "MID-1"])      # no .md positional
+
+
+def test_meeting_mode_merges_quorum_notes(tmp_path, capsys, monkeypatch):
+    import review
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(review, "_fetch_via_quorum", lambda mid: "QUORUM-NOTE")
+    template = tmp_path / "t.json"
+    template.write_text(json.dumps({"name": "T", "description": "D",
+        "sections": [{"title": "X", "instruction": "i", "format": "string"}]}))
+    audio = tmp_path / "a.m4a"
+    audio.write_text("x")
+    transcript = tmp_path / "a.manglish.txt"
+    transcript.write_text("hello world")
+    newer = audio.stat().st_mtime + 10
+    os.utime(transcript, (newer, newer))
+
+    review.main([str(audio), "-t", str(template), "--meeting", "MID-1", "--dry-run"])
+    out = capsys.readouterr().out
+    assert "QUORUM-NOTE" in out and "GROUND TRUTH" in out
