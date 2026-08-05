@@ -60,6 +60,12 @@ function buildMinutesMarkdown({ org, title, date, teams, decisions }) {
   return out.join('\n');
 }
 
+function minutesStatus(m) {
+  return (m && m.minutes_final && String(m.minutes_final).trim())
+    ? { label: 'Minutes ready', cls: 'ready' }
+    : { label: 'Awaiting minutes', cls: 'pending' };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { classifyFile, isAccepted, groupFilesByTeam, buildMinutesMarkdown };
+  module.exports = { classifyFile, isAccepted, groupFilesByTeam, buildMinutesMarkdown, minutesStatus };
 }

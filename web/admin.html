@@ -198,6 +198,7 @@
 <script src="config.js"></script>
 <script src="supa.js?v=3"></script>
 <script src="ui.js?v=1"></script>
+<script src="lib.js?v=1"></script>
 <script>
 (async function(){
   await requireAuth();
@@ -253,11 +254,13 @@
       const active = meeting && m.id === meeting.id ? ' active' : '';
       const modeName = m.model === 'admin' ? 'VIP' : 'Team';
       const modelBadge = ' <span class="mt-flag mt-flag-' + m.model + '">' + modeName + '</span>';
+      const st = minutesStatus(m);
+      const statusBadge = ' <span class="mt-flag mt-status-' + st.cls + '">' + st.label + '</span>';
       const label = (m.title ? esc(m.title) + ' · ' : '') + subCount(m.id) + '/' + totalTeams + ' in';
       return '<button type="button" class="meeting-tab' + active + '" data-id="' + m.id + '" title="' + esc(m.title || '') + '">' +
         '<span class="mt-dot' + (done ? ' submitted' : '') + '"></span>' +
         '<span class="mt-body"><span class="mt-date">' + esc(fmtTab(m.meeting_date)) + '</span>' +
-        '<span class="mt-sub">' + label + modelBadge + '</span></span></button>';
+        '<span class="mt-sub">' + label + modelBadge + statusBadge + '</span></span></button>';
     }).join('');
     Array.prototype.forEach.call(tabsEl.querySelectorAll('.meeting-tab'), function(btn){
       btn.addEventListener('click', function(){ switchMeeting(btn.dataset.id); });

@@ -72,3 +72,13 @@ test('buildMinutesMarkdown fills template with empty fallbacks', () => {
   assert.match(md, /### R&D\n\n_No updates this week_/);
   assert.match(md, /## Decisions\n\n_None recorded_/);
 });
+
+const { minutesStatus } = require('./web/lib.js');
+
+test('minutesStatus reflects whether minutes are published', () => {
+  assert.equal(minutesStatus({ minutes_final: '# Minutes\nbody' }).label, 'Minutes ready');
+  assert.equal(minutesStatus({ minutes_final: '   ' }).label, 'Awaiting minutes');
+  assert.equal(minutesStatus({ minutes_final: null, is_active: true }).label, 'Awaiting minutes');
+  assert.equal(minutesStatus({}).label, 'Awaiting minutes');
+  assert.equal(minutesStatus({ minutes_final: '# M' }).cls, 'ready');
+});
