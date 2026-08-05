@@ -74,6 +74,23 @@ def fetch_notes(meeting_id: str) -> str:
     return combined
 
 
+def sync_templates(rows) -> list:
+    """Upsert template-registry rows [{stem, name, description}] into Supabase."""
+    if not rows:
+        return []
+    c = _client()
+    res = c.table("templates").upsert(rows, on_conflict="stem").execute()
+    return res.data or []
+
+
+def get_meeting_template(meeting_id: str):
+    """Return the meeting's chosen template stem, or None."""
+    c = _client()
+    rows = (c.table("meetings").select("template")
+            .eq("id", meeting_id).execute().data) or []
+    return (rows[0].get("template") if rows else None) or None
+
+
 def publish_minutes(meeting_id: str, markdown: str) -> list:
     if not markdown or not markdown.strip():
         sys.exit("Refusing to publish empty minutes.")

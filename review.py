@@ -128,6 +128,38 @@ def _publish_via_quorum(meeting_id: str, markdown: str) -> None:
     quorum.publish_minutes(meeting_id, markdown)
 
 
+def _local_templates(script_dir):
+    return sorted(Path(script_dir).glob("*.json"))
+
+
+def _read_template_meta(paths):
+    """Parse template JSON files -> [{stem, name, description}]; skip non-templates."""
+    rows = []
+    for p in paths:
+        p = Path(p)
+        try:
+            d = json.loads(p.read_text())
+        except Exception as e:
+            print(f"skip {p.name}: not valid JSON ({e})", file=sys.stderr)
+            continue
+        if not d.get("name") or "sections" not in d:
+            print(f"skip {p.name}: not a template (needs name + sections)", file=sys.stderr)
+            continue
+        rows.append({"stem": p.stem, "name": d["name"],
+                     "description": d.get("description") or ""})
+    return rows
+
+
+def _sync_templates_via_quorum(rows):
+    import quorum
+    return quorum.sync_templates(rows)
+
+
+def _meeting_template_via_quorum(meeting_id):
+    import quorum
+    return quorum.get_meeting_template(meeting_id)
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="Recording + notes -> markdown review.")
     ap.add_argument("recording", nargs="?",
@@ -144,6 +176,8 @@ def main(argv=None) -> None:
                     help="Quorum meeting id: pull its pre-meeting notes as ground truth")
     ap.add_argument("--publish", metavar="MEETING_ID",
                     help="publish the given review .md to this meeting's minutes and archive it")
+    ap.add_argument("--sync-templates", action="store_true",
+                    help="upsert local templates into Supabase and exit")
     args = ap.parse_args(argv)
 
     if args.publish:
@@ -152,6 +186,13 @@ def main(argv=None) -> None:
         text = Path(args.recording).read_text()
         _publish_via_quorum(args.publish, text)
         print(f"published {args.recording} -> meeting {args.publish} (archived)")
+        return
+
+    if args.sync_templates:
+        script_dir = Path(__file__).resolve().parent
+        rows = _read_template_meta(_local_templates(script_dir))
+        synced = _sync_templates_via_quorum(rows)
+        print(f"synced {len(synced)} templates")
         return
 
     if not args.recording:

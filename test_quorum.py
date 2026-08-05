@@ -30,3 +30,8 @@ def test_client_requires_env(monkeypatch):
 def test_publish_refuses_empty_markdown():
     with pytest.raises(SystemExit):
         publish_minutes("some-id", "   ")
+
+
+def test_sync_templates_empty_is_noop_without_network():
+    from quorum import sync_templates
+    assert sync_templates([]) == []      # returns early, never builds a client
