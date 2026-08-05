@@ -142,7 +142,15 @@
         </div>
       </section>
 
+      <section class="card" id="handoff-card" style="display:none;margin-bottom:22px;">
+        <div class="label">Generate minutes on your Mac</div>
+        <p class="page-sub">Record the meeting, then run this — the meeting id is filled in.</p>
+        <pre class="handoff-cmd"><code id="handoff-cmd-text"></code></pre>
+        <button type="button" class="btn btn-subtle" id="handoff-copy">Copy command</button>
+      </section>
+
       <div class="admin-actions">
+        <button type="button" class="btn btn-ghost" id="status-action-btn" style="display:none;"></button>
         <button class="btn btn-ghost btn-lg" id="minutes-btn" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
           Export minutes
@@ -228,6 +236,10 @@
   const fOrg   = document.getElementById('m-org');
   const fModel = document.getElementById('m-model');
   const fTemplate = document.getElementById('m-template');
+  const handoffCard = document.getElementById('handoff-card');
+  const handoffCmd = document.getElementById('handoff-cmd-text');
+  const handoffCopy = document.getElementById('handoff-copy');
+  const statusActionBtn = document.getElementById('status-action-btn');
   const savedEl = document.getElementById('meeting-saved');
   const teamsCard = document.getElementById('teams-card');
   const vipWs = document.getElementById('vip-workspace');
@@ -295,6 +307,37 @@
     tbody.innerHTML = '';
     (teams || []).forEach(renderTeamRow);
     refreshReadiness();
+    renderLifecycle(m);
+  }
+  // What the single status button does next, per current status.
+  function nextStatusAction(m) {
+    const s = (m && m.status) || 'setup';
+    const vip = !!(m && m.model === 'admin');
+    if (s === 'setup')      return vip ? { label: 'Ready to record', to: 'ready' }
+                                       : { label: 'Open for submissions', to: 'collecting' };
+    if (s === 'collecting') return { label: 'Ready to record', to: 'ready' };
+    if (s === 'ready')      return { label: 'Reopen for submissions', to: 'collecting' };
+    return null;                        // processing / draft / published: Mac-owned, no control
+  }
+
+  function renderLifecycle(m) {
+    if (!m) { handoffCard.style.display = 'none'; statusActionBtn.style.display = 'none'; return; }
+    const s = m.status || 'setup';
+    const preRecord = (s === 'setup' || s === 'collecting' || s === 'ready');
+    if (preRecord) {
+      handoffCmd.textContent = './review.py --meeting ' + m.id + ' <recording>';
+      handoffCard.style.display = '';
+    } else {
+      handoffCard.style.display = 'none';
+    }
+    const act = nextStatusAction(m);
+    if (act) {
+      statusActionBtn.textContent = act.label;
+      statusActionBtn.dataset.to = act.to;
+      statusActionBtn.style.display = '';
+    } else {
+      statusActionBtn.style.display = 'none';
+    }
   }
   async function switchMeeting(id){
     setSelectedMeeting(id);
@@ -349,6 +392,21 @@
     renderTabs();
     await showMeeting(meetings[0] || null);
     toast(meetings.length ? 'Meeting archived' : 'Meeting archived — no open meetings left', 'ok');
+  });
+
+  handoffCopy.addEventListener('click', function(){
+    navigator.clipboard.writeText(handoffCmd.textContent).then(function(){
+      handoffCopy.textContent = 'Copied'; setTimeout(function(){ handoffCopy.textContent = 'Copy command'; }, 1500);
+    });
+  });
+
+  statusActionBtn.addEventListener('click', async function(){
+    if (!mId) return;
+    const to = statusActionBtn.dataset.to;
+    await supa.from('meetings').update({ status: to }).eq('id', mId);
+    if (meeting) meeting.status = to;
+    renderLifecycle(meeting);
+    renderTabs();
   });
   // Render one team row. Reused when a team is added so the table updates in place — no full reload.
   function renderTeamRow(t, idx){
