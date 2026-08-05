@@ -33,6 +33,29 @@ the `service_role` key).
     # publish the reviewed file as that meeting's minutes (archives it to History)
     ./review.py --publish <meeting-id> weekly_review_<date>.md
 
+## Recording an online meeting (Zoom / Meet / Teams)
+The pipeline only needs an audio file, so any online call works once you can
+record both sides into one file.
+
+**One-time setup (Audio MIDI Setup.app):**
+1. **Multi-Output Device** = `VB-Cable` + your headphones. Set the meeting app's
+   speaker (or the system output) to it — the far-end audio goes into VB-Cable and
+   you still hear it.
+2. **Aggregate Device** = `VB-Cable` + your microphone. This is what gets recorded,
+   so one file carries both the far end and your voice.
+
+**Each meeting:**
+
+    ./record.sh                     # Ctrl-C to stop; writes recordings/meeting_<ts>.m4a
+    ./review.py --meeting <id> recordings/meeting_<ts>.m4a
+
+`RECORD_DEVICE="My Aggregate" ./record.sh` if your device has another name;
+`./record.sh --list` shows what ffmpeg sees.
+
+**Verify once:** record ~15s while you talk and a video clip plays, then
+`./review.py <that-file> --dry-run` and confirm both voices appear in the transcript
+before trusting it on a real meeting.
+
 ## Writing the notes — the ONE habit that matters
 Start each notes document with the **project name as the first heading**, e.g.
 `# DataAnalyzerProMax`, then the details. One document = one project.
