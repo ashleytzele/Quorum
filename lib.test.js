@@ -73,12 +73,21 @@ test('buildMinutesMarkdown fills template with empty fallbacks', () => {
   assert.match(md, /## Decisions\n\n_None recorded_/);
 });
 
-const { minutesStatus } = require('./web/lib.js');
+const { meetingStatus } = require('./web/lib.js');
 
-test('minutesStatus reflects whether minutes are published', () => {
-  assert.equal(minutesStatus({ minutes_final: '# Minutes\nbody' }).label, 'Minutes ready');
-  assert.equal(minutesStatus({ minutes_final: '   ' }).label, 'Awaiting minutes');
-  assert.equal(minutesStatus({ minutes_final: null, is_active: true }).label, 'Awaiting minutes');
-  assert.equal(minutesStatus({}).label, 'Awaiting minutes');
-  assert.equal(minutesStatus({ minutes_final: '# M' }).cls, 'ready');
+test('meetingStatus maps each explicit status', () => {
+  assert.equal(meetingStatus({ status: 'setup' }).label, 'Setup');
+  assert.equal(meetingStatus({ status: 'collecting' }).label, 'Collecting');
+  assert.equal(meetingStatus({ status: 'ready' }).label, 'Ready to record');
+  assert.equal(meetingStatus({ status: 'processing' }).label, 'Processing');
+  assert.equal(meetingStatus({ status: 'draft' }).label, 'Draft ready');
+  assert.equal(meetingStatus({ status: 'published' }).label, 'Published');
+  assert.equal(meetingStatus({ status: 'published' }).cls, 'published');
+});
+
+test('meetingStatus derives status for un-migrated rows', () => {
+  assert.equal(meetingStatus({ is_active: false }).label, 'Published');
+  assert.equal(meetingStatus({ is_active: true, minutes_final: '# M' }).label, 'Draft ready');
+  assert.equal(meetingStatus({ is_active: true }).label, 'Collecting');
+  assert.equal(meetingStatus({}).label, 'Collecting');
 });

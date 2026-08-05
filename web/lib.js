@@ -60,12 +60,21 @@ function buildMinutesMarkdown({ org, title, date, teams, decisions }) {
   return out.join('\n');
 }
 
-function minutesStatus(m) {
-  return (m && m.minutes_final && String(m.minutes_final).trim())
-    ? { label: 'Minutes ready', cls: 'ready' }
-    : { label: 'Awaiting minutes', cls: 'pending' };
+function meetingStatus(m) {
+  const S = {
+    setup:      { key: 'setup',      label: 'Setup',           cls: 'setup' },
+    collecting: { key: 'collecting', label: 'Collecting',      cls: 'collecting' },
+    ready:      { key: 'ready',      label: 'Ready to record', cls: 'ready' },
+    processing: { key: 'processing', label: 'Processing',      cls: 'processing' },
+    draft:      { key: 'draft',      label: 'Draft ready',     cls: 'draft' },
+    published:  { key: 'published',  label: 'Published',       cls: 'published' },
+  };
+  if (m && m.status && S[m.status]) return S[m.status];
+  if (m && m.is_active === false) return S.published;
+  if (m && m.minutes_final && String(m.minutes_final).trim()) return S.draft;
+  return S.collecting;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { classifyFile, isAccepted, groupFilesByTeam, buildMinutesMarkdown, minutesStatus };
+  module.exports = { classifyFile, isAccepted, groupFilesByTeam, buildMinutesMarkdown, meetingStatus };
 }

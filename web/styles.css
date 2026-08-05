@@ -363,8 +363,12 @@ body.present-body{background:var(--bg);overflow:hidden;}
 .mt-dot.submitted{background:var(--ok);border-color:var(--ok);}
 .mt-flag{display:inline-block;font-size:0.625rem;font-weight:700;letter-spacing:.03em;padding:1px 6px;border-radius:6px;background:var(--accent-100);color:var(--accent-700);vertical-align:middle;}
 .mt-flag-team{background:var(--muted-bg);color:var(--text-2);}
-.mt-status-ready{background:var(--ok-50);color:var(--ok);}
-.mt-status-pending{background:var(--muted-bg);color:var(--text-2);}
+.mt-status-setup{background:var(--muted-bg);color:var(--text-2);}
+.mt-status-collecting{background:var(--muted-bg);color:var(--text-2);}
+.mt-status-ready{background:var(--accent-50);color:var(--accent-700);}
+.mt-status-processing{background:var(--accent-100);color:var(--accent-700);}
+.mt-status-draft{background:var(--accent-50);color:var(--accent-700);}
+.mt-status-published{background:var(--ok-50);color:var(--ok);}
 .pf-banner{background:var(--accent-50);color:var(--accent-700);border:1px solid var(--accent-100);border-radius:var(--radius-sm);padding:10px 14px;font-size:0.8438rem;margin-bottom:22px;}
 .pf-banner a{margin-left:8px;font-weight:600;}
 /* Embedded workspace (admin-run VIP meeting inside admin.html): strip page chrome */

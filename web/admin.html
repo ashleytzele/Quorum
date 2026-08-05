@@ -254,7 +254,7 @@
       const active = meeting && m.id === meeting.id ? ' active' : '';
       const modeName = m.model === 'admin' ? 'VIP' : 'Team';
       const modelBadge = ' <span class="mt-flag mt-flag-' + m.model + '">' + modeName + '</span>';
-      const st = minutesStatus(m);
+      const st = meetingStatus(m);
       const statusBadge = ' <span class="mt-flag mt-status-' + st.cls + '">' + st.label + '</span>';
       const label = (m.title ? esc(m.title) + ' · ' : '') + subCount(m.id) + '/' + totalTeams + ' in';
       return '<button type="button" class="meeting-tab' + active + '" data-id="' + m.id + '" title="' + esc(m.title || '') + '">' +
