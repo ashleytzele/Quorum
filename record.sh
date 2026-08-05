@@ -33,7 +33,9 @@ TS="$(date +%Y-%m-%d_%H%M%S)"
 OUT="$OUTDIR/meeting_${TS}.m4a"
 echo "Recording '${DEVICE_NAME}' (index ${IDX}) -> ${OUT}"
 echo "Press Ctrl-C to stop."
-ffmpeg -hide_banner -loglevel warning -f avfoundation -i ":${IDX}" -c:a aac "$OUT"
+# ponytail: ffmpeg exits 255 on the Ctrl-C SIGINT that's the normal way to stop
+# this — the file is still finalized fine. Swallow it so "Saved ..."/"Next ..." print.
+ffmpeg -hide_banner -loglevel warning -f avfoundation -i ":${IDX}" -c:a aac "$OUT" || true
 
 echo
 echo "Saved ${OUT}"
