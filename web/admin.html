@@ -323,7 +323,7 @@
   function renderLifecycle(m) {
     if (!m) { handoffCard.style.display = 'none'; statusActionBtn.style.display = 'none'; return; }
     const s = m.status || 'setup';
-    const preRecord = (s === 'setup' || s === 'collecting' || s === 'ready');
+    const preRecord = (s === 'setup' || s === 'collecting' || s === 'ready' || s === 'processing');
     if (preRecord) {
       handoffCmd.textContent = './review.py --meeting ' + m.id + ' <recording>';
       handoffCard.style.display = '';
