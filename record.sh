@@ -37,6 +37,11 @@ echo "Press Ctrl-C to stop."
 # this — the file is still finalized fine. Swallow it so "Saved ..."/"Next ..." print.
 ffmpeg -hide_banner -loglevel warning -f avfoundation -i ":${IDX}" -c:a aac "$OUT" || true
 
-echo
-echo "Saved ${OUT}"
-echo "Next: ./review.py --meeting <meeting-id> \"${OUT}\""
+if [[ -s "$OUT" ]]; then
+  echo
+  echo "Saved ${OUT}"
+  echo "Next: ./review.py --meeting <meeting-id> \"${OUT}\""
+else
+  echo "ffmpeg produced no output file (${OUT}) — recording failed." >&2
+  exit 1
+fi
