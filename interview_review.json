@@ -1,5 +1,6 @@
 {
   "name": "Interview Record",
+  "registry": true,
   "description": "A neutral, structured record of a single Campus Recreation Aquatics candidate interview — built for archiving and later comparison, NOT for making a hiring decision. Serves BOTH roles (Aquatics Student Leader and Lifeguard) and any question set: the interview questions change between candidates and roles, so capture whatever was actually asked. The intake skeleton is stable (name/major/graduation/pronouns, the ≥6-units + ≥2.0-GPA eligibility check, and availability), so those are captured as dedicated sections. STRICTLY NEUTRAL: summarize what was said, never judge, score, rank, or recommend. No 'strong answer', no 'seemed nervous', no fit rating — just the record. Ignore the interviewer's opening position overview (pay rate, hours, program description); record only the candidate's responses and stated facts.",
   "sections": [
     {

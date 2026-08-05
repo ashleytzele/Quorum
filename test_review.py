@@ -142,9 +142,13 @@ def test_meeting_mode_merges_quorum_notes(tmp_path, capsys, monkeypatch):
 def test_read_template_meta_keeps_templates_skips_others(tmp_path, capsys):
     import review
     (tmp_path / "weekly_review.json").write_text(json.dumps(
-        {"name": "Weekly Review v2", "description": "by project", "sections": [{"title": "X"}]}))
+        {"name": "Weekly Review v2", "description": "by project", "registry": True,
+         "sections": [{"title": "X"}]}))
     (tmp_path / "notatemplate.json").write_text(json.dumps({"foo": 1}))       # no name+sections
     (tmp_path / "broken.json").write_text("{ not json")
+    (tmp_path / "array.json").write_text(json.dumps([1, 2, 3]))              # non-object JSON
+    (tmp_path / "unmarked.json").write_text(json.dumps(
+        {"name": "Cruft", "description": "d", "sections": [{"title": "Y"}]}))  # no registry marker
     rows = review._read_template_meta(sorted(tmp_path.glob("*.json")))
     assert rows == [{"stem": "weekly_review", "name": "Weekly Review v2",
                      "description": "by project"}]
@@ -156,7 +160,8 @@ def test_sync_templates_mode_reads_local_and_calls_quorum(tmp_path, monkeypatch,
     monkeypatch.setattr(review, "_local_templates",
                         lambda d: sorted(tmp_path.glob("*.json")))
     (tmp_path / "interview_review.json").write_text(json.dumps(
-        {"name": "Interview Record", "description": "neutral", "sections": [{"title": "Y"}]}))
+        {"name": "Interview Record", "description": "neutral", "registry": True,
+         "sections": [{"title": "Y"}]}))
     monkeypatch.setattr(review, "_sync_templates_via_quorum",
                         lambda rows: sent.setdefault("rows", rows) or rows)
     review.main(["--sync-templates"])

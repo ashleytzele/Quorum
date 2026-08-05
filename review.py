@@ -133,7 +133,8 @@ def _local_templates(script_dir):
 
 
 def _read_template_meta(paths):
-    """Parse template JSON files -> [{stem, name, description}]; skip non-templates."""
+    """Parse template JSON files -> [{stem, name, description}] for the registry.
+    Only files marked with a truthy top-level "registry" key are included."""
     rows = []
     for p in paths:
         p = Path(p)
@@ -142,11 +143,12 @@ def _read_template_meta(paths):
         except Exception as e:
             print(f"skip {p.name}: not valid JSON ({e})", file=sys.stderr)
             continue
+        if not isinstance(d, dict) or not d.get("registry"):
+            continue  # not a registry template (non-object JSON, or unmarked cruft) — skip
         if not d.get("name") or "sections" not in d:
-            print(f"skip {p.name}: not a template (needs name + sections)", file=sys.stderr)
+            print(f"skip {p.name}: marked registry but missing name/sections", file=sys.stderr)
             continue
-        rows.append({"stem": p.stem, "name": d["name"],
-                     "description": d.get("description") or ""})
+        rows.append({"stem": p.stem, "name": d["name"], "description": d.get("description") or ""})
     return rows
 
 
