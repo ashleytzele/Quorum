@@ -139,6 +139,39 @@ def test_meeting_mode_merges_quorum_notes(tmp_path, capsys, monkeypatch):
     assert "QUORUM-NOTE" in out and "GROUND TRUTH" in out
 
 
+def test_resolve_template_precedence(tmp_path):
+    import review
+    (tmp_path / "weekly_review.json").write_text("{}")
+    (tmp_path / "interview_review.json").write_text("{}")
+    # explicit -t wins
+    assert review.resolve_template("/x/custom.json", "interview_review", tmp_path) == "/x/custom.json"
+    # else the meeting's stem
+    assert review.resolve_template(None, "interview_review", tmp_path) == str(tmp_path / "interview_review.json")
+    # else the default
+    assert review.resolve_template(None, None, tmp_path) == str(tmp_path / "weekly_review.json")
+
+
+def test_resolve_template_unknown_stem_exits(tmp_path):
+    import review
+    (tmp_path / "weekly_review.json").write_text("{}")
+    with pytest.raises(SystemExit):
+        review.resolve_template(None, "nope", tmp_path)
+
+
+def test_meeting_mode_uses_meeting_template(tmp_path, capsys, monkeypatch):
+    import review
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(review, "_fetch_via_quorum", lambda mid: "QNOTE")
+    monkeypatch.setattr(review, "_meeting_template_via_quorum", lambda mid: "interview_review")
+    audio = tmp_path / "a.m4a"; audio.write_text("x")
+    transcript = tmp_path / "a.manglish.txt"; transcript.write_text("hi")
+    newer = audio.stat().st_mtime + 10; os.utime(transcript, (newer, newer))
+    # no -t: the interview template (real file in the repo) must be selected
+    review.main([str(audio), "--meeting", "MID-1", "--dry-run"])
+    out = capsys.readouterr().out
+    assert "Interview" in out          # interview_review.json's section titles reach the prompt
+
+
 def test_read_template_meta_keeps_templates_skips_others(tmp_path, capsys):
     import review
     (tmp_path / "weekly_review.json").write_text(json.dumps(

@@ -162,13 +162,27 @@ def _meeting_template_via_quorum(meeting_id):
     return quorum.get_meeting_template(meeting_id)
 
 
+def resolve_template(explicit, meeting_template, script_dir):
+    """Pick the template path: explicit -t > meeting's stem > DEFAULT_TEMPLATE.
+    Exit if meeting_template names a stem with no local <stem>.json."""
+    if explicit:
+        return explicit
+    if meeting_template:
+        cand = Path(script_dir) / f"{meeting_template}.json"
+        if not cand.exists():
+            avail = ", ".join(p.stem for p in _local_templates(script_dir)) or "(none)"
+            sys.exit(f"meeting template '{meeting_template}' has no {cand.name} here. Available: {avail}")
+        return str(cand)
+    return str(Path(script_dir) / DEFAULT_TEMPLATE)
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="Recording + notes -> markdown review.")
     ap.add_argument("recording", nargs="?",
                     help="audio/recording folder (generate), or the review .md (with --publish)")
     ap.add_argument("notes", nargs="*", help="pre-meeting .docx/.pptx/.pdf files")
-    ap.add_argument("-t", "--template",
-                    default=str(Path(__file__).resolve().parent / DEFAULT_TEMPLATE))
+    ap.add_argument("-t", "--template", default=None,
+                    help="template JSON; overrides the meeting's template. Default: weekly_review.json")
     ap.add_argument("--clean", action="store_true", help="denoise before transcribing")
     ap.add_argument("--dry-run", action="store_true",
                     help="print the prompt and stop; no OpenAI call")
@@ -203,11 +217,22 @@ def main(argv=None) -> None:
     if not args.dry_run and not os.environ.get("OPENAI_API_KEY"):
         sys.exit("OPENAI_API_KEY not set. export it, or put it in a .env you source.")
 
-    template = json.loads(Path(args.template).read_text())
+    script_dir = Path(__file__).resolve().parent
     notes = read_notes(args.notes)
+    meeting_template = None
     if args.meeting:
         qnotes = _fetch_via_quorum(args.meeting)
         notes = (qnotes + "\n\n" + notes).strip() if notes.strip() else qnotes
+        if not args.template:
+            meeting_template = _meeting_template_via_quorum(args.meeting)
+        if not args.dry_run:
+            try:
+                _sync_templates_via_quorum(_read_template_meta(_local_templates(script_dir)))
+            except Exception as e:
+                print(f"warning: template sync skipped ({e})", file=sys.stderr)
+
+    template_path = resolve_template(args.template, meeting_template, script_dir)
+    template = json.loads(Path(template_path).read_text())
     transcript = transcribe(args.recording, args.clean)
 
     # Two-pass: if the template asks to enumerate first (weekly review does,
@@ -225,7 +250,7 @@ def main(argv=None) -> None:
         return
 
     result = call_openai(messages, args.model)
-    stem = Path(args.template).stem
+    stem = Path(template_path).stem
     out = args.out or f"{stem}_{_date_from(args.recording)}.md"
     Path(out).write_text(result)
     print(f"wrote {out}")
