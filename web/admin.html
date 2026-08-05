@@ -83,6 +83,13 @@
               </select>
               <span class="field-hint" id="model-hint">Team: each team submits their own · VIP: you author it all.</span>
             </div>
+            <div class="field">
+              <label class="label" for="m-template">Template</label>
+              <select class="input" id="m-template">
+                <option value="">Default (weekly)</option>
+              </select>
+              <span class="field-hint">Which review format the pipeline generates for this meeting.</span>
+            </div>
           </form>
         </div>
       </section>
@@ -219,6 +226,7 @@
   const fDate  = document.getElementById('m-date');
   const fOrg   = document.getElementById('m-org');
   const fModel = document.getElementById('m-model');
+  const fTemplate = document.getElementById('m-template');
   const savedEl = document.getElementById('meeting-saved');
   const teamsCard = document.getElementById('teams-card');
   const vipWs = document.getElementById('vip-workspace');
@@ -265,6 +273,7 @@
     fDate.value  = m ? (m.meeting_date || '') : '';
     fOrg.value   = m ? (m.org || '') : '';
     fModel.value = m ? (m.model || 'team') : 'team';
+    fTemplate.value = m ? (m.template || '') : '';
     document.getElementById('org-name').textContent = (m && m.org) || 'Admin console';
     flashSaved();
     if (typeof closeDrawer === 'function') closeDrawer();
@@ -295,15 +304,23 @@
 
   function flashSaving(){ savedEl.className = 'status saving'; savedEl.innerHTML = '<span class="dot"></span>Saving…'; }
   function flashSaved(){ savedEl.className = 'status ok'; savedEl.innerHTML = '<span class="dot"></span>All changes saved'; }
+  async function loadTemplateOptions(){
+    const { data } = await supa.from('templates').select('stem,name').order('name');
+    (data || []).forEach(function(t){
+      const o = document.createElement('option');
+      o.value = t.stem; o.textContent = t.name;
+      fTemplate.appendChild(o);
+    });
+  }
   async function persistMeeting(){
     flashSaving();
-    const payload = { title: fTitle.value || 'Untitled', meeting_date: fDate.value || null, org: fOrg.value, model: fModel.value };
+    const payload = { title: fTitle.value || 'Untitled', meeting_date: fDate.value || null, org: fOrg.value, model: fModel.value, template: fTemplate.value || null };
     if (mId){ await supa.from('meetings').update(payload).eq('id', mId); }
     else { const { data } = await supa.from('meetings').insert(Object.assign({ is_active: true }, payload)).select().single(); mId = data.id; meeting = data; meetings.push(data); renderTabs(); }
     flashSaved();
   }
   let mtimer;
-  [fTitle, fDate, fOrg, fModel].forEach(function(f){ f.addEventListener('input', function(){ flashSaving(); clearTimeout(mtimer); mtimer = setTimeout(persistMeeting, 600); }); });
+  [fTitle, fDate, fOrg, fModel, fTemplate].forEach(function(f){ f.addEventListener('input', function(){ flashSaving(); clearTimeout(mtimer); mtimer = setTimeout(persistMeeting, 600); }); });
   document.getElementById('meeting-form').addEventListener('submit', function(e){ e.preventDefault(); persistMeeting(); });
 
   // New meeting: add another open meeting; select it in place.
@@ -536,6 +553,7 @@
 
   // Everything is wired — do the initial render now that the drawer consts exist.
   renderTabs();
+  await loadTemplateOptions();
   await showMeeting(meeting);
 })();
 </script>
