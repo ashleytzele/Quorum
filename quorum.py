@@ -60,8 +60,8 @@ def fetch_notes(meeting_id: str) -> str:
         blob = c.storage.from_("submissions").download(s["file_path"])
         suffix = Path(s.get("file_name") or s["file_path"]).suffix
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as fh:
-            fh.write(blob)
             tmp = fh.name
+            fh.write(blob)
         try:
             name = s.get("file_name") or Path(s["file_path"]).name
             file_texts.append((name, md.convert(tmp).text_content))

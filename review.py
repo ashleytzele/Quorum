@@ -161,11 +161,11 @@ def main(argv=None) -> None:
         sys.exit("OPENAI_API_KEY not set. export it, or put it in a .env you source.")
 
     template = json.loads(Path(args.template).read_text())
-    transcript = transcribe(args.recording, args.clean)
     notes = read_notes(args.notes)
     if args.meeting:
         qnotes = _fetch_via_quorum(args.meeting)
         notes = (qnotes + "\n\n" + notes).strip() if notes.strip() else qnotes
+    transcript = transcribe(args.recording, args.clean)
 
     # Two-pass: if the template asks to enumerate first (weekly review does,
     # interviews don't), list the projects, then require one section per project.
