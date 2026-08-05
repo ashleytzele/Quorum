@@ -20,6 +20,43 @@ def test_combine_inputs_empty_is_empty_string():
     assert _combine_inputs([], [], []) == ""
 
 
+def test_combine_inputs_includes_during_notes():
+    from quorum import _combine_inputs
+    out = _combine_inputs(
+        pre_notes=[("WCE", "pre stuff")],
+        file_texts=[],
+        links=[],
+        during_notes=[("WCE", "live decision: ship Friday"), ("MSAR", "  ")],
+    )
+    assert "--- WCE (pre-meeting note) ---" in out and "pre stuff" in out
+    assert "--- WCE (during-meeting note) ---" in out and "live decision: ship Friday" in out
+    assert "MSAR" not in out          # blank during-note dropped
+    # during-note for a team appears after that team's pre-note block
+    assert out.index("(pre-meeting note)") < out.index("(during-meeting note)")
+
+
+def test_combine_inputs_backward_compatible_without_during():
+    from quorum import _combine_inputs
+    out = _combine_inputs(pre_notes=[("WCE", "x")], file_texts=[], links=[])
+    assert "--- WCE (pre-meeting note) ---" in out and "during-meeting" not in out
+
+
+def test_fetch_notes_empty_warns_and_returns_blank(monkeypatch, capsys):
+    import quorum
+    class FakeExec:
+        def __init__(self, data): self.data = data
+    class FakeTable:
+        def select(self, *a): return self
+        def eq(self, *a): return self
+        def execute(self): return FakeExec([])          # no notes, no submissions
+    class FakeClient:
+        def table(self, name): return FakeTable()
+    monkeypatch.setattr(quorum, "_client", lambda: FakeClient())
+    result = quorum.fetch_notes("MID-empty")             # must NOT raise SystemExit
+    assert result == ""
+    assert "no notes" in capsys.readouterr().err.lower()
+
+
 def test_client_requires_env(monkeypatch):
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)

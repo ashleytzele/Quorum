@@ -9,11 +9,16 @@ import tempfile
 from pathlib import Path
 
 
-def _combine_inputs(pre_notes, file_texts, links) -> str:
+def _combine_inputs(pre_notes, file_texts, links, during_notes=()) -> str:
     parts = []
     for team, text in pre_notes:
         if text and text.strip():
             parts.append(f"--- {team} (pre-meeting note) ---")
+            parts.append(text.strip())
+            parts.append("")
+    for team, text in during_notes:
+        if text and text.strip():
+            parts.append(f"--- {team} (during-meeting note) ---")
             parts.append(text.strip())
             parts.append("")
     for name, text in file_texts:
@@ -40,10 +45,12 @@ def _client():
 
 def fetch_notes(meeting_id: str) -> str:
     c = _client()
-    note_rows = (c.table("notes").select("pre_note, teams(name)")
+    note_rows = (c.table("notes").select("pre_note, content, teams(name)")
                  .eq("meeting_id", meeting_id).execute().data) or []
     pre_notes = [((r.get("teams") or {}).get("name") or "Team",
                   r.get("pre_note") or "") for r in note_rows]
+    during_notes = [((r.get("teams") or {}).get("name") or "Team",
+                     r.get("content") or "") for r in note_rows]
 
     sub_rows = (c.table("submissions")
                 .select("file_path, file_name, mime, url")
@@ -68,9 +75,11 @@ def fetch_notes(meeting_id: str) -> str:
         finally:
             os.unlink(tmp)
 
-    combined = _combine_inputs(pre_notes, file_texts, links)
+    combined = _combine_inputs(pre_notes, file_texts, links, during_notes)
     if not combined:
-        sys.exit(f"No notes or submissions found for meeting {meeting_id}.")
+        print(f"warning: no notes or submissions for meeting {meeting_id} — "
+              f"generating from the recording alone.", file=sys.stderr)
+        return ""
     return combined
 
 
