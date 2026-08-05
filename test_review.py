@@ -187,6 +187,44 @@ def test_read_template_meta_keeps_templates_skips_others(tmp_path, capsys):
                      "description": "by project"}]
 
 
+def test_meeting_generate_writes_processing_then_draft(tmp_path, capsys, monkeypatch):
+    import review
+    monkeypatch.setenv("OPENAI_API_KEY", "x")
+    monkeypatch.setattr(review, "_fetch_via_quorum", lambda mid: "QNOTE")
+    monkeypatch.setattr(review, "_meeting_template_via_quorum", lambda mid: None)
+    monkeypatch.setattr(review, "_sync_templates_via_quorum", lambda rows: rows)
+    calls = []
+    monkeypatch.setattr(review, "_set_status_via_quorum", lambda mid, s: calls.append((mid, s)))
+    monkeypatch.setattr(review, "transcribe", lambda rec, clean: "hello transcript")
+    monkeypatch.setattr(review, "call_openai", lambda messages, model: "# Minutes\nbody")
+    audio = tmp_path / "a.m4a"; audio.write_text("x")
+    template = tmp_path / "weekly_review.json"
+    template.write_text(json.dumps({"name": "T", "description": "d",
+        "sections": [{"title": "X", "instruction": "i", "format": "string"}]}))
+    out = tmp_path / "o.md"
+    review.main([str(audio), "-t", str(template), "--meeting", "MID-1", "-o", str(out)])
+    assert calls == [("MID-1", "processing"), ("MID-1", "draft")]
+
+
+def test_status_write_failure_does_not_abort_generate(tmp_path, monkeypatch):
+    import review
+    monkeypatch.setenv("OPENAI_API_KEY", "x")
+    monkeypatch.setattr(review, "_fetch_via_quorum", lambda mid: "QNOTE")
+    monkeypatch.setattr(review, "_meeting_template_via_quorum", lambda mid: None)
+    monkeypatch.setattr(review, "_sync_templates_via_quorum", lambda rows: rows)
+    def boom(mid, s): raise RuntimeError("supabase down")
+    monkeypatch.setattr(review, "_set_status_via_quorum", boom)
+    monkeypatch.setattr(review, "transcribe", lambda rec, clean: "hi")
+    monkeypatch.setattr(review, "call_openai", lambda messages, model: "# M")
+    audio = tmp_path / "a.m4a"; audio.write_text("x")
+    template = tmp_path / "weekly_review.json"
+    template.write_text(json.dumps({"name": "T", "description": "d",
+        "sections": [{"title": "X", "instruction": "i", "format": "string"}]}))
+    out = tmp_path / "o.md"
+    review.main([str(audio), "-t", str(template), "--meeting", "MID-1", "-o", str(out)])
+    assert out.read_text() == "# M"      # generate completed despite status failures
+
+
 def test_sync_templates_mode_reads_local_and_calls_quorum(tmp_path, monkeypatch, capsys):
     import review
     sent = {}

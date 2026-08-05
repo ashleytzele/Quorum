@@ -91,12 +91,19 @@ def get_meeting_template(meeting_id: str):
     return (rows[0].get("template") if rows else None) or None
 
 
+def set_meeting_status(meeting_id: str, status: str) -> list:
+    """update meetings set status=<status> where id=<meeting_id>."""
+    c = _client()
+    res = c.table("meetings").update({"status": status}).eq("id", meeting_id).execute()
+    return res.data or []
+
+
 def publish_minutes(meeting_id: str, markdown: str) -> list:
     if not markdown or not markdown.strip():
         sys.exit("Refusing to publish empty minutes.")
     c = _client()
     res = (c.table("meetings")
-           .update({"minutes_final": markdown, "is_active": False})
+           .update({"minutes_final": markdown, "is_active": False, "status": "published"})
            .eq("id", meeting_id).execute())
     if not res.data:
         sys.exit(f"No meeting matched id {meeting_id}; nothing published.")

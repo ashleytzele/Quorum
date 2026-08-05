@@ -162,6 +162,18 @@ def _meeting_template_via_quorum(meeting_id):
     return quorum.get_meeting_template(meeting_id)
 
 
+def _set_status_via_quorum(meeting_id, status):
+    import quorum
+    return quorum.set_meeting_status(meeting_id, status)
+
+
+def _status_best_effort(meeting_id, status):
+    try:
+        _set_status_via_quorum(meeting_id, status)
+    except Exception as e:
+        print(f"warning: status update to '{status}' skipped ({e})", file=sys.stderr)
+
+
 def resolve_template(explicit, meeting_template, script_dir):
     """Pick the template path: explicit -t > meeting's stem > DEFAULT_TEMPLATE.
     Exit if meeting_template names a stem with no local <stem>.json."""
@@ -230,6 +242,7 @@ def main(argv=None) -> None:
                 _sync_templates_via_quorum(_read_template_meta(_local_templates(script_dir)))
             except Exception as e:
                 print(f"warning: template sync skipped ({e})", file=sys.stderr)
+            _status_best_effort(args.meeting, "processing")
 
     template_path = resolve_template(args.template, meeting_template, script_dir)
     template = json.loads(Path(template_path).read_text())
@@ -254,6 +267,8 @@ def main(argv=None) -> None:
     out = args.out or f"{stem}_{_date_from(args.recording)}.md"
     Path(out).write_text(result)
     print(f"wrote {out}")
+    if args.meeting and not args.dry_run:
+        _status_best_effort(args.meeting, "draft")
 
 
 if __name__ == "__main__":
