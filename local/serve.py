@@ -162,9 +162,9 @@ def create_app(meetings_root) -> Flask:
         try:
             d = _dir(mid)
         except ValueError:
-            return ("bad id", 400)
+            return (jsonify({"error": "bad id"}), 400)
         if not (d / "meta.json").exists():
-            return ("not found", 404)
+            return (jsonify({"error": "not found"}), 404)
         mins = (d / "minutes.md")
         return jsonify({"meta": {**_read_meta(d), "id": d.name, "status": _meeting_status(d)},
                         "notes": _notes(d),
@@ -175,9 +175,9 @@ def create_app(meetings_root) -> Flask:
         try:
             d = _dir(mid)
         except ValueError:
-            return ("bad id", 400)
+            return (jsonify({"error": "bad id"}), 400)
         if not (d / "meta.json").exists():
-            return ("not found", 404)
+            return (jsonify({"error": "not found"}), 404)
         meta = _read_meta(d)
         b = request.get_json(force=True)
         for k in ("title", "template"):
@@ -189,13 +189,14 @@ def create_app(meetings_root) -> Flask:
     @app.put("/api/meetings/<mid>/notes/<path:name>")
     def save_note(mid, name):
         try:
-            d, safe = _dir(mid), _safe_name(name)
+            d = _dir(mid)
         except ValueError:
-            return ("bad name", 400)
+            return (jsonify({"error": "bad id"}), 400)
         if not (d / "meta.json").exists():
-            return ("not found", 404)
+            return (jsonify({"error": "not found"}), 404)
+        slug = _slugify(name)   # accepts any input; sanitizes to a safe [a-z0-9-]+ slug, no path escape
         (d / "notes").mkdir(exist_ok=True)
-        (d / "notes" / f"{safe}.md").write_text(request.get_json(force=True).get("content", ""))
+        (d / "notes" / f"{slug}.md").write_text(request.get_json(force=True).get("content", ""))
         return jsonify({"ok": True})
 
     rec = {"proc": None, "meeting_id": None}   # single active recording
@@ -210,11 +211,11 @@ def create_app(meetings_root) -> Flask:
         try:
             d = _dir(mid)
         except ValueError:
-            return ("bad id", 400)
+            return (jsonify({"error": "bad id"}), 400)
         if not (d / "meta.json").exists():
-            return ("not found", 404)
+            return (jsonify({"error": "not found"}), 404)
         if rec["proc"] is not None and rec["proc"].poll() is None:
-            return ("already recording", 409)
+            return (jsonify({"error": "already recording"}), 409)
         name = os.environ.get("RECORD_DEVICE", "Aggregate Device")
         idx = _resolve_device_index(_list_audio(), name)
         if idx is None:
@@ -227,7 +228,7 @@ def create_app(meetings_root) -> Flask:
     def record_stop(mid):
         if rec["proc"] is None or rec["proc"].poll() is not None:
             rec["proc"], rec["meeting_id"] = None, None
-            return ("not recording", 409)
+            return (jsonify({"error": "not recording"}), 409)
         rec_mid = rec["meeting_id"]  # the meeting actually recording, not the URL's mid
         proc = rec["proc"]
         proc.send_signal(signal.SIGINT)
@@ -250,9 +251,9 @@ def create_app(meetings_root) -> Flask:
         try:
             d = _dir(mid)
         except ValueError:
-            return ("bad id", 400)
+            return (jsonify({"error": "bad id"}), 400)
         if not (d / "meta.json").exists():
-            return ("not found", 404)
+            return (jsonify({"error": "not found"}), 404)
         recording = d / "recording.m4a"
         if not recording.exists():
             return (jsonify({"error": "no recording yet"}), 400)
@@ -278,9 +279,9 @@ def create_app(meetings_root) -> Flask:
         try:
             d = _dir(mid)
         except ValueError:
-            return ("bad id", 400)
+            return (jsonify({"error": "bad id"}), 400)
         if not (d / "meta.json").exists():
-            return ("not found", 404)
+            return (jsonify({"error": "not found"}), 404)
         (d / "minutes.md").write_text(request.get_json(force=True).get("content", ""))
         return jsonify({"ok": True})
 

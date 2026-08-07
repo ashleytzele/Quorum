@@ -59,17 +59,40 @@ def test_api_create_get_and_save_note(tmp_path):
     c = app.test_client()
     r = c.post("/api/meetings", json={"title": "Demo", "template": "weekly_review"})
     mid = r.get_json()["id"]
-    c.put(f"/api/meetings/{mid}/notes/DataProject", json={"content": "# DataProject\nshipped"})
+    c.put(f"/api/meetings/{mid}/notes/Data Project", json={"content": "# DataProject\nshipped"})
     got = c.get(f"/api/meetings/{mid}").get_json()
-    assert got["notes"] == [{"name": "DataProject", "content": "# DataProject\nshipped"}]
+    assert got["notes"] == [{"name": "data-project", "content": "# DataProject\nshipped"}]
     assert got["minutes"] == ""
 
 
-def test_api_note_path_traversal_rejected(tmp_path):
+def test_api_save_note_sanitizes_punctuated_name(tmp_path):
     app = serve.create_app(tmp_path)
     c = app.test_client()
     mid = c.post("/api/meetings", json={"title": "D", "template": "weekly_review"}).get_json()["id"]
-    assert c.put(f"/api/meetings/{mid}/notes/..%2fevil", json={"content": "x"}).status_code == 400
+    r = c.put(f"/api/meetings/{mid}/notes/Q3 Report!", json={"content": "x"})
+    assert r.status_code == 200
+    notes_dir = tmp_path / mid / "notes"
+    files = list(notes_dir.iterdir())
+    assert files == [notes_dir / "q3-report.md"]
+
+
+def test_api_note_path_traversal_sanitized_not_escaped(tmp_path):
+    app = serve.create_app(tmp_path)
+    c = app.test_client()
+    mid = c.post("/api/meetings", json={"title": "D", "template": "weekly_review"}).get_json()["id"]
+    r = c.put(f"/api/meetings/{mid}/notes/..%2f..%2fevil", json={"content": "x"})
+    assert r.status_code == 200
+    # nothing escaped the meeting's notes/ folder
+    assert not (tmp_path / "evil.md").exists()
+    assert not (tmp_path / "evil").exists()
+    notes_dir = tmp_path / mid / "notes"
+    files = list(notes_dir.iterdir())
+    assert len(files) == 1
+    f = files[0]
+    assert f.parent == notes_dir              # lives inside notes/, nowhere else
+    assert f.name == f"{f.stem}.md"
+    import re
+    assert re.match(r"^[a-z0-9-]+$", f.stem)  # safe slug, no path separators
 
 
 SAMPLE_DEVICES = """[AVFoundation indev @ 0x1] AVFoundation audio devices:

@@ -52,7 +52,8 @@ function addNoteEditor(name, content) {
     <textarea class="textarea" rows="4" style="width:100%;">${esc(content||'')}</textarea>`;
   const [nameEl, taEl] = wrap.querySelectorAll('input,textarea');
   const save = () => nameEl.value && api(`/api/meetings/${currentId}/notes/${encodeURIComponent(nameEl.value)}`,
-    {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content: taEl.value})});
+    {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content: taEl.value})})
+    .catch(e => alert(e.error || 'could not save note'));
   nameEl.onchange = save; taEl.onchange = save;
   box.appendChild(wrap);
 }
@@ -85,16 +86,20 @@ async function toggleRecord() {
   await api(`/api/meetings/${currentId}/record/${mine ? 'stop' : 'start'}`, {method:'POST'})
     .catch(e => alert(e.error || 'record failed'));
   refreshRecordStatus();
+  if (mine) loadMeetings();   // a stop just finished — refresh sidebar status pill
 }
 
 async function generate() {
   const st = document.getElementById('gen-status'); st.textContent = 'generating…';
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
   try {
     const r = await api(`/api/meetings/${currentId}/generate`, {method:'POST'});
     document.getElementById('minutes-edit').value = r.minutes;
     st.textContent = `projects (${r.projects.length}): ${r.projects.join(', ')}`;
     loadMeetings();
   } catch (e) { st.textContent = 'failed: ' + (e.error || 'error'); }
+  finally { btn.disabled = false; }
 }
 
 document.getElementById('new-meeting-btn').onclick = async () => {

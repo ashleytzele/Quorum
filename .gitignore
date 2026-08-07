@@ -5,6 +5,7 @@
 
 # local GUI meeting storage
 meetings/
+.venv/
 
 # Secrets
 .env
