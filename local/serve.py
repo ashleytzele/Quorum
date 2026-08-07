@@ -7,6 +7,7 @@ import datetime
 import subprocess
 import signal
 import os
+import sys
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
 
@@ -14,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 STATIC = Path(__file__).resolve().parent / "static"
 _NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 _DEVICE_LINE = re.compile(r"\[(\d+)\]\s+(.+?)\s*$")
+_PROJECTS_RE = re.compile(r"^projects \(\d+\):\s*(.*)$", re.M)
 
 
 def _safe_name(s: str) -> str:
@@ -111,6 +113,18 @@ def _spawn_ffmpeg(idx: str, out_path: Path):
     return subprocess.Popen(
         ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-f", "avfoundation",
          "-i", f":{idx}", "-c:a", "aac", str(out_path)])
+
+
+def _generate_argv(python, review_py, recording, note_paths, template_path, out_path):
+    return [python, str(review_py), str(recording), *sorted(str(p) for p in note_paths),
+            "-t", str(template_path), "-o", str(out_path)]
+
+
+def _parse_projects(stdout: str):
+    m = _PROJECTS_RE.search(stdout or "")
+    if not m or not m.group(1).strip():
+        return []
+    return [x.strip() for x in m.group(1).split(",") if x.strip()]
 
 
 def create_app(meetings_root) -> Flask:
@@ -230,6 +244,45 @@ def create_app(meetings_root) -> Flask:
         if not (f.exists() and f.stat().st_size > 0):
             return (jsonify({"error": "recording produced no file"}), 500)
         return jsonify({"ok": True, "bytes": f.stat().st_size})
+
+    @app.post("/api/meetings/<mid>/generate")
+    def generate(mid):
+        try:
+            d = _dir(mid)
+        except ValueError:
+            return ("bad id", 400)
+        if not (d / "meta.json").exists():
+            return ("not found", 404)
+        recording = d / "recording.m4a"
+        if not recording.exists():
+            return (jsonify({"error": "no recording yet"}), 400)
+        meta = _read_meta(d)
+        template = REPO_ROOT / f"{_safe_name(meta.get('template', 'weekly_review'))}.json"
+        note_paths = sorted(str(p) for p in (d / "notes").glob("*.md"))
+        out = d / "minutes.md"
+        tmp_out = d / ".minutes.tmp.md"
+        argv = _generate_argv(sys.executable, REPO_ROOT / "review.py", recording,
+                              note_paths, template, tmp_out)
+        r = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True)
+        if r.returncode != 0 or not tmp_out.exists():
+            if tmp_out.exists():
+                tmp_out.unlink()
+            return (jsonify({"error": (r.stderr or "generation failed").strip()}), 500)
+        tmp_out.replace(out)     # commit only on success — old minutes survive a failure
+        return jsonify({"ok": True, "projects": _parse_projects(r.stdout),
+                        "minutes": out.read_text(),
+                        "warnings": [l for l in (r.stderr or "").splitlines() if l.strip()]})
+
+    @app.put("/api/meetings/<mid>/minutes")
+    def save_minutes(mid):
+        try:
+            d = _dir(mid)
+        except ValueError:
+            return ("bad id", 400)
+        if not (d / "meta.json").exists():
+            return ("not found", 404)
+        (d / "minutes.md").write_text(request.get_json(force=True).get("content", ""))
+        return jsonify({"ok": True})
 
     return app
 

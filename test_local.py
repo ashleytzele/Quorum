@@ -126,3 +126,57 @@ def test_record_stop_checks_recording_meetings_folder_not_url_mid(tmp_path, monk
     assert c.post(f"/api/meetings/{mid_b}/record/stop").status_code == 200
     assert c.get("/api/record/status").get_json() == {"recording": False, "meeting_id": None}
     assert not (tmp_path / mid_b / "recording.m4a").exists()
+
+
+def test_generate_argv_sorted_notes():
+    argv = serve._generate_argv("py", "review.py", "rec.m4a",
+                                ["notes/b.md", "notes/a.md"], "weekly_review.json", "out.md")
+    assert argv == ["py", "review.py", "rec.m4a", "notes/a.md", "notes/b.md",
+                    "-t", "weekly_review.json", "-o", "out.md"]
+
+
+def test_parse_projects():
+    assert serve._parse_projects("projects (3): A, B, C\nwrote out.md\n") == ["A", "B", "C"]
+    assert serve._parse_projects("wrote out.md\n") == []
+
+
+def test_generate_requires_recording(tmp_path):
+    app = serve.create_app(tmp_path)
+    c = app.test_client()
+    mid = c.post("/api/meetings", json={"title": "G", "template": "weekly_review"}).get_json()["id"]
+    assert c.post(f"/api/meetings/{mid}/generate").status_code == 400   # no recording yet
+
+
+def test_generate_runs_review_and_returns_minutes(tmp_path, monkeypatch):
+    app = serve.create_app(tmp_path)
+    c = app.test_client()
+    mid = c.post("/api/meetings", json={"title": "G", "template": "weekly_review"}).get_json()["id"]
+    d = tmp_path / mid
+    (d / "recording.m4a").write_bytes(b"AUDIO")
+    (d / "notes" / "P.md").write_text("# P")
+    def fake_run(argv, **kw):
+        Path(argv[argv.index("-o") + 1]).write_text("# Minutes\nbody")   # simulate review.py writing -o
+        class R: returncode = 0; stdout = "projects (1): P\nwrote out\n"; stderr = ""
+        return R()
+    monkeypatch.setattr(serve.subprocess, "run", fake_run)
+    r = c.post(f"/api/meetings/{mid}/generate").get_json()
+    assert r["projects"] == ["P"] and "# Minutes" in r["minutes"]
+    # edit + save
+    c.put(f"/api/meetings/{mid}/minutes", json={"content": "# Edited"})
+    assert c.get(f"/api/meetings/{mid}").get_json()["minutes"] == "# Edited"
+
+
+def test_generate_failure_keeps_old_minutes(tmp_path, monkeypatch):
+    app = serve.create_app(tmp_path)
+    c = app.test_client()
+    mid = c.post("/api/meetings", json={"title": "G", "template": "weekly_review"}).get_json()["id"]
+    d = tmp_path / mid
+    (d / "recording.m4a").write_bytes(b"A")
+    (d / "minutes.md").write_text("# Old")
+    def fail_run(argv, **kw):
+        class R: returncode = 1; stdout = ""; stderr = "OPENAI_API_KEY not set."
+        return R()
+    monkeypatch.setattr(serve.subprocess, "run", fail_run)
+    r = c.post(f"/api/meetings/{mid}/generate")
+    assert r.status_code == 500 and "OPENAI_API_KEY" in r.get_json()["error"]
+    assert (d / "minutes.md").read_text() == "# Old"     # not overwritten
