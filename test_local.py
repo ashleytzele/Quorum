@@ -6,6 +6,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "local"))
 import serve
 
 
+def test_index_served(tmp_path):
+    app = serve.create_app(tmp_path)
+    r = app.test_client().get("/")
+    assert r.status_code == 200 and b"<html" in r.data.lower()
+
+
 def test_safe_name_accepts_and_rejects():
     assert serve._safe_name("weekly_review-2") == "weekly_review-2"
     for bad in ["../etc", "a/b", "a b", "a.b", ""]:
