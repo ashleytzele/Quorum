@@ -56,6 +56,15 @@ record both sides into one file.
 `./review.py <that-file> --dry-run` and confirm both voices appear in the transcript
 before trusting it on a real meeting.
 
+## Using the official Meetily app's transcript
+Record in the Meetily app; then use its transcript instead of transcribing here:
+
+    ./review.py --list-meetily                                  # find the meeting id
+    ./review.py --meetily-app <id> notes.md -t weekly_review.json
+    ./review.py --meetily-app <id> --meeting <quorum-id>        # + Quorum notes -> minutes
+
+Read-only: this never modifies the app's data. Override the DB path with MEETILY_APP_DB.
+
 ## Writing the notes — the ONE habit that matters
 Start each notes document with the **project name as the first heading**, e.g.
 `# DataAnalyzerProMax`, then the details. One document = one project.

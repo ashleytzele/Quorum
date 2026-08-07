@@ -239,3 +239,36 @@ def test_sync_templates_mode_reads_local_and_calls_quorum(tmp_path, monkeypatch,
     assert sent["rows"] == [{"stem": "interview_review", "name": "Interview Record",
                              "description": "neutral"}]
     assert "synced 1" in capsys.readouterr().out
+
+
+def test_list_meetily_prints_and_returns(capsys, monkeypatch):
+    import review
+    monkeypatch.setattr(review, "_list_meetily_meetings",
+                        lambda: [{"id": "m2", "title": "Beta", "created_at": "2026-07-25T10:00:00Z"},
+                                 {"id": "m1", "title": "Alpha", "created_at": "2026-07-24T10:00:00Z"}])
+    review.main(["--list-meetily"])
+    out = capsys.readouterr().out
+    assert "m2" in out and "2026-07-25" in out and "Beta" in out
+
+
+def test_meetily_app_uses_transcript_without_recording(tmp_path, capsys, monkeypatch):
+    import review
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(review, "_transcript_via_meetily_app", lambda mid: "APP TRANSCRIPT TEXT")
+    def no_transcribe(*a, **k):
+        raise AssertionError("transcribe must not be called in --meetily-app mode")
+    monkeypatch.setattr(review, "transcribe", no_transcribe)
+    template = tmp_path / "weekly_review.json"
+    template.write_text(json.dumps({"name": "T", "description": "d",
+        "sections": [{"title": "X", "instruction": "i", "format": "string"}]}))
+    # no recording positional, dry-run to skip OpenAI
+    review.main(["--meetily-app", "m1", "-t", str(template), "--dry-run"])
+    out = capsys.readouterr().out
+    assert "APP TRANSCRIPT TEXT" in out
+
+
+def test_recording_or_meetily_app_required(monkeypatch):
+    import review
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(SystemExit):
+        review.main(["--dry-run"])      # neither a recording nor --meetily-app

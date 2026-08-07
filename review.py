@@ -118,6 +118,16 @@ def _date_from(recording: str) -> str:
     return datetime.date.fromtimestamp(target.stat().st_mtime).isoformat()
 
 
+def _transcript_via_meetily_app(meeting_id):
+    import meetily_app
+    return meetily_app.get_transcript(meeting_id)
+
+
+def _list_meetily_meetings():
+    import meetily_app
+    return meetily_app.list_meetings()
+
+
 def _fetch_via_quorum(meeting_id: str) -> str:
     import quorum
     return quorum.fetch_notes(meeting_id)
@@ -206,6 +216,10 @@ def main(argv=None) -> None:
                     help="publish the given review .md to this meeting's minutes and archive it")
     ap.add_argument("--sync-templates", action="store_true",
                     help="upsert local templates into Supabase and exit")
+    ap.add_argument("--meetily-app", metavar="ID",
+                    help="use the Meetily app meeting's transcript instead of transcribing")
+    ap.add_argument("--list-meetily", action="store_true",
+                    help="list the Meetily app's meetings (id, date, title) and exit")
     args = ap.parse_args(argv)
 
     if args.publish:
@@ -223,8 +237,16 @@ def main(argv=None) -> None:
         print(f"synced {len(synced)} templates")
         return
 
-    if not args.recording:
-        sys.exit("a recording (audio file or folder) is required.")
+    if args.list_meetily:
+        meetings = _list_meetily_meetings()
+        if not meetings:
+            print("no Meetily app meetings found.")
+        for m in meetings:
+            print(f'{m["id"]}  {(m.get("created_at") or "")[:10]}  {m.get("title") or ""}')
+        return
+
+    if not args.recording and not args.meetily_app:
+        sys.exit("a recording (audio file/folder) or --meetily-app <id> is required.")
 
     if not args.dry_run and not os.environ.get("OPENAI_API_KEY"):
         sys.exit("OPENAI_API_KEY not set. export it, or put it in a .env you source.")
@@ -246,7 +268,10 @@ def main(argv=None) -> None:
 
     template_path = resolve_template(args.template, meeting_template, script_dir)
     template = json.loads(Path(template_path).read_text())
-    transcript = transcribe(args.recording, args.clean)
+    if args.meetily_app:
+        transcript = _transcript_via_meetily_app(args.meetily_app)
+    else:
+        transcript = transcribe(args.recording, args.clean)
 
     # Two-pass: if the template asks to enumerate first (weekly review does,
     # interviews don't), list the projects, then require one section per project.
@@ -264,7 +289,8 @@ def main(argv=None) -> None:
 
     result = call_openai(messages, args.model)
     stem = Path(template_path).stem
-    out = args.out or f"{stem}_{_date_from(args.recording)}.md"
+    date = _date_from(args.recording) if args.recording else datetime.date.today().isoformat()
+    out = args.out or f"{stem}_{date}.md"
     Path(out).write_text(result)
     print(f"wrote {out}")
     if args.meeting and not args.dry_run:
