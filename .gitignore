@@ -3,6 +3,9 @@
 *.wav
 *.bin
 
+# local GUI meeting storage
+meetings/
+
 # Secrets
 .env
 
