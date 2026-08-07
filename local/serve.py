@@ -214,13 +214,19 @@ def create_app(meetings_root) -> Flask:
         if rec["proc"] is None or rec["proc"].poll() is not None:
             rec["proc"], rec["meeting_id"] = None, None
             return ("not recording", 409)
-        rec["proc"].send_signal(signal.SIGINT)
+        rec_mid = rec["meeting_id"]  # the meeting actually recording, not the URL's mid
+        proc = rec["proc"]
+        proc.send_signal(signal.SIGINT)
         try:
-            rec["proc"].wait(timeout=10)
+            proc.wait(timeout=10)
         except Exception:
-            pass
+            proc.kill()  # ffmpeg ignored SIGINT — don't orphan it / hold the device
+            try:
+                proc.wait(timeout=5)
+            except Exception:
+                pass
         rec["proc"], rec["meeting_id"] = None, None
-        f = _dir(mid) / "recording.m4a"
+        f = root / _safe_name(rec_mid) / "recording.m4a"  # check the REAL recording's folder
         if not (f.exists() and f.stat().st_size > 0):
             return (jsonify({"error": "recording produced no file"}), 500)
         return jsonify({"ok": True, "bytes": f.stat().st_size})

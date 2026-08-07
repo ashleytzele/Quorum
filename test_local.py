@@ -102,3 +102,27 @@ def test_record_status_and_single_recording(tmp_path, monkeypatch):
     (tmp_path / mid / "recording.m4a").write_bytes(b"AUDIO")
     assert c.post(f"/api/meetings/{mid}/record/stop").status_code == 200
     assert c.get("/api/record/status").get_json()["recording"] is False
+
+
+def test_record_stop_checks_recording_meetings_folder_not_url_mid(tmp_path, monkeypatch):
+    app = serve.create_app(tmp_path)
+    c = app.test_client()
+    mid_a = c.post("/api/meetings", json={"title": "A", "template": "weekly_review"}).get_json()["id"]
+    mid_b = c.post("/api/meetings", json={"title": "B", "template": "weekly_review"}).get_json()["id"]
+
+    class FakeProc:
+        def poll(self): return None
+        def send_signal(self, s): pass
+        def wait(self, timeout=None): return 0
+    monkeypatch.setattr(serve, "_spawn_ffmpeg", lambda idx, out: FakeProc())
+    monkeypatch.setattr(serve, "_resolve_device_index", lambda blob, name: "0")
+    monkeypatch.setattr(serve, "_list_audio", lambda: SAMPLE_DEVICES)
+
+    # start recording meeting A
+    assert c.post(f"/api/meetings/{mid_a}/record/start").status_code == 200
+    # only A's folder gets a real recording; B's folder has nothing
+    (tmp_path / mid_a / "recording.m4a").write_bytes(b"AUDIO")
+    # stop is called with B's id in the URL — must still validate A's (the recording's) folder
+    assert c.post(f"/api/meetings/{mid_b}/record/stop").status_code == 200
+    assert c.get("/api/record/status").get_json() == {"recording": False, "meeting_id": None}
+    assert not (tmp_path / mid_b / "recording.m4a").exists()
