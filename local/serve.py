@@ -4,12 +4,16 @@ recording, and shells out to review.py for generation. Bind 127.0.0.1 only."""
 import json
 import re
 import datetime
+import subprocess
+import signal
+import os
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STATIC = Path(__file__).resolve().parent / "static"
 _NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+_DEVICE_LINE = re.compile(r"\[(\d+)\]\s+(.+?)\s*$")
 
 
 def _safe_name(s: str) -> str:
@@ -79,6 +83,34 @@ def _list_templates(repo_root: Path) -> list:
 def _notes(d: Path) -> list:
     nd = d / "notes"
     return [{"name": f.stem, "content": f.read_text()} for f in sorted(nd.glob("*.md"))] if nd.exists() else []
+
+
+def _list_audio() -> str:
+    r = subprocess.run(["ffmpeg", "-f", "avfoundation", "-list_devices", "true", "-i", ""],
+                       capture_output=True, text=True)
+    return r.stderr or r.stdout
+
+
+def _resolve_device_index(list_output: str, device_name: str):
+    in_audio = False
+    for line in list_output.splitlines():
+        if "AVFoundation audio devices:" in line:
+            in_audio = True
+            continue
+        if "AVFoundation video devices:" in line:
+            in_audio = False
+            continue
+        if in_audio:
+            m = _DEVICE_LINE.search(line)
+            if m and m.group(2) == device_name:
+                return m.group(1)
+    return None
+
+
+def _spawn_ffmpeg(idx: str, out_path: Path):
+    return subprocess.Popen(
+        ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-f", "avfoundation",
+         "-i", f":{idx}", "-c:a", "aac", str(out_path)])
 
 
 def create_app(meetings_root) -> Flask:
@@ -151,6 +183,47 @@ def create_app(meetings_root) -> Flask:
         (d / "notes").mkdir(exist_ok=True)
         (d / "notes" / f"{safe}.md").write_text(request.get_json(force=True).get("content", ""))
         return jsonify({"ok": True})
+
+    rec = {"proc": None, "meeting_id": None}   # single active recording
+
+    @app.get("/api/record/status")
+    def record_status():
+        active = rec["proc"] is not None and rec["proc"].poll() is None
+        return jsonify({"recording": active, "meeting_id": rec["meeting_id"] if active else None})
+
+    @app.post("/api/meetings/<mid>/record/start")
+    def record_start(mid):
+        try:
+            d = _dir(mid)
+        except ValueError:
+            return ("bad id", 400)
+        if not (d / "meta.json").exists():
+            return ("not found", 404)
+        if rec["proc"] is not None and rec["proc"].poll() is None:
+            return ("already recording", 409)
+        name = os.environ.get("RECORD_DEVICE", "Aggregate Device")
+        idx = _resolve_device_index(_list_audio(), name)
+        if idx is None:
+            return (jsonify({"error": f"audio device {name!r} not found"}), 400)
+        rec["proc"] = _spawn_ffmpeg(idx, d / "recording.m4a")
+        rec["meeting_id"] = d.name
+        return jsonify({"ok": True})
+
+    @app.post("/api/meetings/<mid>/record/stop")
+    def record_stop(mid):
+        if rec["proc"] is None or rec["proc"].poll() is not None:
+            rec["proc"], rec["meeting_id"] = None, None
+            return ("not recording", 409)
+        rec["proc"].send_signal(signal.SIGINT)
+        try:
+            rec["proc"].wait(timeout=10)
+        except Exception:
+            pass
+        rec["proc"], rec["meeting_id"] = None, None
+        f = _dir(mid) / "recording.m4a"
+        if not (f.exists() and f.stat().st_size > 0):
+            return (jsonify({"error": "recording produced no file"}), 500)
+        return jsonify({"ok": True, "bytes": f.stat().st_size})
 
     return app
 

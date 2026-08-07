@@ -64,3 +64,41 @@ def test_api_note_path_traversal_rejected(tmp_path):
     c = app.test_client()
     mid = c.post("/api/meetings", json={"title": "D", "template": "weekly_review"}).get_json()["id"]
     assert c.put(f"/api/meetings/{mid}/notes/..%2fevil", json={"content": "x"}).status_code == 400
+
+
+SAMPLE_DEVICES = """[AVFoundation indev @ 0x1] AVFoundation audio devices:
+[AVFoundation indev @ 0x1] [0] Aggregate Device
+[AVFoundation indev @ 0x1] [1] MacBook Air Microphone
+[AVFoundation indev @ 0x1] [2] VB-Cable
+"""
+
+def test_resolve_device_index():
+    assert serve._resolve_device_index(SAMPLE_DEVICES, "Aggregate Device") == "0"
+    assert serve._resolve_device_index(SAMPLE_DEVICES, "VB-Cable") == "2"
+    assert serve._resolve_device_index(SAMPLE_DEVICES, "Nope") is None
+
+
+def test_record_status_and_single_recording(tmp_path, monkeypatch):
+    app = serve.create_app(tmp_path)
+    c = app.test_client()
+    mid = c.post("/api/meetings", json={"title": "R", "template": "weekly_review"}).get_json()["id"]
+    assert c.get("/api/record/status").get_json() == {"recording": False, "meeting_id": None}
+
+    class FakeProc:
+        def __init__(self): self.signals = []
+        def poll(self): return None
+        def send_signal(self, s): self.signals.append(s)
+        def wait(self, timeout=None): return 0
+    fake = FakeProc()
+    monkeypatch.setattr(serve, "_spawn_ffmpeg", lambda idx, out: fake)
+    monkeypatch.setattr(serve, "_resolve_device_index", lambda blob, name: "0")
+    monkeypatch.setattr(serve, "_list_audio", lambda: SAMPLE_DEVICES)
+
+    assert c.post(f"/api/meetings/{mid}/record/start").status_code == 200
+    assert c.get("/api/record/status").get_json()["recording"] is True
+    # second start refused while one is active
+    assert c.post(f"/api/meetings/{mid}/record/start").status_code == 409
+    # stop finalizes (write a non-empty file to simulate ffmpeg output)
+    (tmp_path / mid / "recording.m4a").write_bytes(b"AUDIO")
+    assert c.post(f"/api/meetings/{mid}/record/stop").status_code == 200
+    assert c.get("/api/record/status").get_json()["recording"] is False
