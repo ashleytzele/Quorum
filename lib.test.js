@@ -91,3 +91,15 @@ test('meetingStatus derives status for un-migrated rows', () => {
   assert.equal(meetingStatus({ is_active: true }).label, 'Collecting');
   assert.equal(meetingStatus({}).label, 'Collecting');
 });
+
+const { matchRecording } = require('./web/lib.js');
+
+test('matchRecording picks nearest date, null on empty', () => {
+  const recs = [
+    { id: 'a', title: 'Standup', created_at: '2026-07-20T10:00:00Z' },
+    { id: 'b', title: 'Weekly Review', created_at: '2026-07-24T10:00:00Z' },
+  ];
+  assert.equal(matchRecording({ meeting_date: '2026-07-24', title: 'Weekly Review' }, recs).id, 'b');
+  assert.equal(matchRecording({ meeting_date: '2026-07-19', title: 'x' }, recs).id, 'a');
+  assert.equal(matchRecording({ meeting_date: '2026-07-24' }, []), null);
+});

@@ -75,6 +75,21 @@ function meetingStatus(m) {
   return S.collecting;
 }
 
+function matchRecording(meeting, recordings) {
+  if (!recordings || !recordings.length) return null;
+  const target = meeting && meeting.meeting_date ? new Date(meeting.meeting_date + 'T00:00').getTime() : NaN;
+  let best = null, bestScore = Infinity;
+  recordings.forEach(function (r) {
+    const t = new Date(r.created_at).getTime();
+    const dateDist = isNaN(target) || isNaN(t) ? 1e15 : Math.abs(t - target);
+    const titleBonus = meeting && meeting.title && r.title &&
+      r.title.toLowerCase().includes(meeting.title.toLowerCase()) ? -1 : 0;
+    const score = dateDist + titleBonus;
+    if (score < bestScore) { bestScore = score; best = r; }
+  });
+  return best;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { classifyFile, isAccepted, groupFilesByTeam, buildMinutesMarkdown, meetingStatus };
+  module.exports = { classifyFile, isAccepted, groupFilesByTeam, buildMinutesMarkdown, meetingStatus, matchRecording };
 }

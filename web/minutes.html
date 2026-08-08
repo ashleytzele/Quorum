@@ -38,6 +38,8 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h17A1.5 1.5 0 0 1 22 4.5V8H2z"/><path d="m9 13 2 2 4-4"/></svg>
           Finalize &amp; archive
         </button>
+        <button class="btn btn-ghost" id="gen-ai" type="button" style="display:none;">Generate with Meetily</button>
+        <select class="input" id="ai-recording" style="display:none;max-width:240px;"></select>
       </div>
     </div>
     <div class="min-fields">
@@ -56,6 +58,11 @@
       <div class="field decisions-field">
         <label class="label" for="decisions">Decisions <span style="color:var(--text-3);font-weight:500;">— one per line</span></label>
         <textarea class="textarea" id="decisions" rows="3" placeholder="One decision per line…"></textarea>
+      </div>
+      <div id="ai-wrap" style="display:none;">
+        <label class="label">AI minutes (editable — review before finalizing)</label>
+        <textarea class="textarea" id="ai-minutes" rows="16" style="width:100%;"></textarea>
+        <div class="page-sub" id="ai-status"></div>
       </div>
     </div>
   </div>
@@ -104,6 +111,44 @@
   title.value = meeting.title || '';
   date.value = meeting.meeting_date || '';
 
+  let aiMinutes = null;   // when set, Finalize publishes this instead of the structured minutes
+  const genAiBtn = document.getElementById('gen-ai');
+  const recSel = document.getElementById('ai-recording');
+  const aiWrap = document.getElementById('ai-wrap');
+  const aiText = document.getElementById('ai-minutes');
+  const aiStatus = document.getElementById('ai-status');
+
+  // Health-gate: only show the AI button if the local bridge is running.
+  try {
+    const h = await fetch(window.BRIDGE_URL + '/health').then(r => r.json());
+    if (h && h.ok) {
+      const recs = await fetch(window.BRIDGE_URL + '/recordings').then(r => r.json());
+      recSel.innerHTML = (recs || []).map(r =>
+        '<option value="' + esc(r.id) + '">' + esc(r.title || r.id) + '</option>').join('');
+      const m = matchRecording(meeting, recs || []);
+      if (m) recSel.value = m.id;
+      if ((recs || []).length) { genAiBtn.style.display = ''; recSel.style.display = ''; }
+    }
+  } catch (e) { /* bridge not running — leave AI button hidden, structured flow works */ }
+
+  aiText.addEventListener('input', function () { aiMinutes = aiText.value; });
+
+  genAiBtn.addEventListener('click', async function () {
+    aiStatus.textContent = 'generating…'; aiWrap.style.display = '';
+    try {
+      const res = await fetch(window.BRIDGE_URL + '/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meeting_id: meeting.id, meetily_id: recSel.value, template: meeting.template || null })
+      }).then(async r => r.ok ? r.json() : Promise.reject(await r.json()));
+      aiMinutes = res.markdown;
+      aiText.value = res.markdown;
+      document.getElementById('d-body').innerHTML = md.render(res.markdown);
+      aiStatus.textContent = 'projects (' + res.projects.length + '): ' + res.projects.join(', ');
+    } catch (e) {
+      aiStatus.textContent = 'failed: ' + ((e && e.error) || 'error');
+    }
+  });
+
   const { data: teams } = await supa.from('teams').select('*').order('name');
   const { data: notes } = await supa.from('notes').select('team_id, content').eq('meeting_id', meeting.id);
   const noteFor = (id) => (notes.find(n => n.team_id === id) || {}).content || '';
@@ -146,6 +191,7 @@
 
   // Markdown snapshot stored for History (rendered there via markdown-it).
   function minutesMarkdown(){
+    if (aiMinutes && aiMinutes.trim()) return aiMinutes;
     if (isVip) {
       const out = ['# ' + (title.value || 'Meeting Minutes'), ''];
       if (org.value) out.push('**Organization:** ' + org.value);
