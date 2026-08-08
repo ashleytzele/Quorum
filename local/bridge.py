@@ -59,22 +59,28 @@ def create_app() -> Flask:
         meeting_id, meetily_id = b.get("meeting_id"), b.get("meetily_id")
         if not meeting_id or not meetily_id:
             return (jsonify({"error": "meeting_id and meetily_id required"}), 400)
-        fd, tmp = tempfile.mkstemp(suffix=".md")
-        os.close(fd)
-        out = Path(tmp)
+        template = b.get("template")
+        if template and not re.fullmatch(r"[A-Za-z0-9_-]+", template):
+            return (jsonify({"error": "invalid template name"}), 400)
         try:
-            argv = _generate_argv(sys.executable, REPO_ROOT / "review.py",
-                                  meetily_id, meeting_id, b.get("template"), out)
-            r = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True)
-            if r.returncode != 0 or not out.exists() or not out.read_text().strip():
-                return (jsonify({"error": (r.stderr or "generation failed").strip()}), 500)
-            markdown = out.read_text()
-        finally:
-            if out.exists():
-                out.unlink()
-        return jsonify({"ok": True, "markdown": markdown,
-                        "projects": _parse_projects(r.stdout),
-                        "warnings": [l for l in (r.stderr or "").splitlines() if l.strip()]})
+            fd, tmp = tempfile.mkstemp(suffix=".md")
+            os.close(fd)
+            out = Path(tmp)
+            try:
+                argv = _generate_argv(sys.executable, REPO_ROOT / "review.py",
+                                      meetily_id, meeting_id, template, out)
+                r = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True)
+                if r.returncode != 0 or not out.exists() or not out.read_text().strip():
+                    return (jsonify({"error": (r.stderr or "generation failed").strip()}), 500)
+                markdown = out.read_text()
+            finally:
+                if out.exists():
+                    out.unlink()
+            return jsonify({"ok": True, "markdown": markdown,
+                            "projects": _parse_projects(r.stdout),
+                            "warnings": [l for l in (r.stderr or "").splitlines() if l.strip()]})
+        except Exception as e:
+            return (jsonify({"error": str(e)}), 500)
 
     return app
 

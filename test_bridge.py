@@ -56,6 +56,12 @@ def test_generate_success(monkeypatch):
     assert "# AI Minutes" in r["markdown"] and r["projects"] == ["P"]
 
 
+def test_generate_invalid_template_400():
+    c = bridge.create_app().test_client()
+    r = c.post("/generate", json={"meeting_id": "q1", "meetily_id": "m1", "template": "../evil"})
+    assert r.status_code == 400 and "invalid template" in r.get_json()["error"]
+
+
 def test_generate_failure_500(monkeypatch):
     def fail_run(argv, **kw):
         class R: returncode = 1; stdout = ""; stderr = "No transcript found."
