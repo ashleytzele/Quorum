@@ -120,9 +120,9 @@
 
   // Health-gate: only show the AI button if the local bridge is running.
   try {
-    const h = await fetch(window.BRIDGE_URL + '/health').then(r => r.json());
+    const h = await fetch(window.BRIDGE_URL + '/health', { signal: AbortSignal.timeout(1500) }).then(r => r.json());
     if (h && h.ok) {
-      const recs = await fetch(window.BRIDGE_URL + '/recordings').then(r => r.json());
+      const recs = await fetch(window.BRIDGE_URL + '/recordings', { signal: AbortSignal.timeout(1500) }).then(r => r.json());
       recSel.innerHTML = (recs || []).map(r =>
         '<option value="' + esc(r.id) + '">' + esc(r.title || r.id) + '</option>').join('');
       const m = matchRecording(meeting, recs || []);
