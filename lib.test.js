@@ -103,3 +103,12 @@ test('matchRecording picks nearest date, null on empty', () => {
   assert.equal(matchRecording({ meeting_date: '2026-07-19', title: 'x' }, recs).id, 'a');
   assert.equal(matchRecording({ meeting_date: '2026-07-24' }, []), null);
 });
+
+const { recordingExt } = require('./web/lib.js');
+
+test('recordingExt maps MediaRecorder mimeType to an extension', () => {
+  assert.equal(recordingExt('audio/webm;codecs=opus'), 'webm');
+  assert.equal(recordingExt('audio/mp4'), 'm4a');
+  assert.equal(recordingExt('video/webm'), 'webm');
+  assert.equal(recordingExt(''), 'webm');
+});

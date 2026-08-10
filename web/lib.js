@@ -90,6 +90,12 @@ function matchRecording(meeting, recordings) {
   return best;
 }
 
+function recordingExt(mimeType) {
+  const m = String(mimeType || '').toLowerCase();
+  if (m.includes('mp4') || m.includes('m4a') || m.includes('aac')) return 'm4a';
+  return 'webm';
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { classifyFile, isAccepted, groupFilesByTeam, buildMinutesMarkdown, meetingStatus, matchRecording };
+  module.exports = { classifyFile, isAccepted, groupFilesByTeam, buildMinutesMarkdown, meetingStatus, matchRecording, recordingExt };
 }

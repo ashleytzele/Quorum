@@ -65,14 +65,27 @@
             <span class="pill">AI</span>
           </div>
           <div class="ai-card-controls">
-            <label class="ai-rec">Recording
-              <select class="input" id="ai-recording"></select>
-            </label>
             <button class="btn btn-subtle" id="gen-ai" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
               Generate
             </button>
           </div>
+        </div>
+        <div class="ai-source">
+          <label><input type="radio" name="ai-source" value="meetily" checked> Meetily recording</label>
+          <label><input type="radio" name="ai-source" value="record"> Record</label>
+          <label><input type="radio" name="ai-source" value="import"> Import</label>
+        </div>
+        <div class="ai-src-panel" data-src="meetily">
+          <label class="ai-rec">Recording <select class="input" id="ai-recording"></select></label>
+        </div>
+        <div class="ai-src-panel" data-src="record" style="display:none;">
+          <label class="ai-rec">Mic <select class="input" id="ai-device"></select></label>
+          <button class="btn btn-ghost" id="ai-rec-btn" type="button">● Record</button>
+          <span id="ai-rec-time" class="page-sub"></span>
+        </div>
+        <div class="ai-src-panel" data-src="import" style="display:none;">
+          <input type="file" id="ai-file" accept="audio/*">
         </div>
         <div class="ai-status" id="ai-status"></div>
         <textarea class="textarea ai-minutes" id="ai-minutes" rows="16" placeholder="Generated minutes appear here — review and edit before finalizing." style="display:none;"></textarea>
@@ -131,6 +144,47 @@
   const aiText = document.getElementById('ai-minutes');
   const aiStatus = document.getElementById('ai-status');
 
+  let recordedBlob = null, importedFile = null, mediaRec = null, recStream = null;
+  function currentSource() { return (document.querySelector('input[name="ai-source"]:checked') || {}).value || 'meetily'; }
+  function showSourcePanels() {
+    const s = currentSource();
+    document.querySelectorAll('.ai-src-panel').forEach(p => { p.style.display = p.dataset.src === s ? '' : 'none'; });
+  }
+  document.querySelectorAll('input[name="ai-source"]').forEach(r => r.addEventListener('change', function () {
+    showSourcePanels();
+    if (currentSource() === 'record') listMics();
+  }));
+
+  async function listMics() {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });   // prompt once so labels appear
+      const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+      document.getElementById('ai-device').innerHTML =
+        devs.map(d => '<option value="' + d.deviceId + '">' + esc(d.label || 'Microphone') + '</option>').join('');
+    } catch (e) { aiStatus.className = 'ai-status is-err'; aiStatus.textContent = 'Mic access denied — use Import instead.'; }
+  }
+
+  document.getElementById('ai-rec-btn').addEventListener('click', async function () {
+    const btn = this;
+    if (mediaRec && mediaRec.state === 'recording') { mediaRec.stop(); return; }
+    try {
+      const deviceId = document.getElementById('ai-device').value;
+      recStream = await navigator.mediaDevices.getUserMedia({ audio: deviceId ? { deviceId } : true });
+      const chunks = [];
+      mediaRec = new MediaRecorder(recStream);
+      mediaRec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      mediaRec.onstop = function () {
+        recordedBlob = new Blob(chunks, { type: mediaRec.mimeType });
+        recStream.getTracks().forEach(t => t.stop());
+        btn.textContent = '● Record'; document.getElementById('ai-rec-time').textContent = 'recorded ✓';
+      };
+      mediaRec.start(); recordedBlob = null;
+      btn.textContent = '■ Stop'; document.getElementById('ai-rec-time').textContent = 'recording…';
+    } catch (e) { aiStatus.className = 'ai-status is-err'; aiStatus.textContent = 'Could not start recording.'; }
+  });
+
+  document.getElementById('ai-file').addEventListener('change', function (e) { importedFile = e.target.files[0] || null; });
+
   // Health-gate: only show the AI button if the local bridge is running.
   try {
     const h = await fetch(window.BRIDGE_URL + '/health', { signal: AbortSignal.timeout(1500) }).then(r => r.json());
@@ -140,24 +194,44 @@
         '<option value="' + esc(r.id) + '">' + esc(r.title || r.id) + '</option>').join('');
       const m = matchRecording(meeting, recs || []);
       if (m) recSel.value = m.id;
-      if ((recs || []).length) { aiWrap.style.display = ''; }
+      aiWrap.style.display = '';
+      if (!(recs || []).length) {
+        // No Meetily recordings — Record/Import don't need any, so keep the card but drop
+        // the Meetily source entirely (its select has nothing to offer).
+        document.querySelector('input[name="ai-source"][value="meetily"]').closest('label').style.display = 'none';
+        document.querySelector('.ai-src-panel[data-src="meetily"]').style.display = 'none';
+        document.querySelector('input[name="ai-source"][value="record"]').checked = true;
+      }
+      showSourcePanels();
     }
   } catch (e) { /* bridge not running — leave AI button hidden, structured flow works */ }
 
   aiText.addEventListener('input', function () { aiMinutes = aiText.value; });
 
   genAiBtn.addEventListener('click', async function () {
-    genAiBtn.disabled = true;
-    aiText.style.display = '';
+    const src = currentSource();
+    genAiBtn.disabled = true; aiText.style.display = '';
     aiStatus.className = 'ai-status is-busy';
-    aiStatus.textContent = 'Generating from the recording and team notes…';
+    aiStatus.textContent = src === 'meetily' ? 'Generating…' : 'Transcribing + generating… (this can take a minute)';
     try {
-      const res = await fetch(window.BRIDGE_URL + '/generate', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meeting_id: meeting.id, meetily_id: recSel.value, template: meeting.template || null })
-      }).then(async r => r.ok ? r.json() : Promise.reject(await r.json()));
-      aiMinutes = res.markdown;
-      aiText.value = res.markdown;
+      let res;
+      if (src === 'meetily') {
+        res = await fetch(window.BRIDGE_URL + '/generate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meeting_id: meeting.id, meetily_id: recSel.value, template: meeting.template || null })
+        }).then(async r => r.ok ? r.json() : Promise.reject(await r.json()));
+      } else {
+        const blob = src === 'record' ? recordedBlob : importedFile;
+        if (!blob) throw { error: src === 'record' ? 'Record something first.' : 'Choose an audio file first.' };
+        const name = src === 'record' ? ('recording.' + recordingExt(blob.type)) : blob.name;
+        const fd = new FormData();
+        fd.append('meeting_id', meeting.id);
+        if (meeting.template) fd.append('template', meeting.template);
+        fd.append('audio', blob, name);
+        res = await fetch(window.BRIDGE_URL + '/generate-audio', { method: 'POST', body: fd })
+          .then(async r => r.ok ? r.json() : Promise.reject(await r.json()));
+      }
+      aiMinutes = res.markdown; aiText.value = res.markdown;
       document.getElementById('d-body').innerHTML = md.render(res.markdown);
       const n = res.projects.length;
       aiStatus.className = 'ai-status is-ok';

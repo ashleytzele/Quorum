@@ -330,6 +330,11 @@ body.present-body{background:var(--bg);overflow:hidden;}
 .ai-status.is-err{color:var(--danger);font-weight:600;}
 .ai-minutes{width:100%;margin-top:10px;min-height:340px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.82rem;line-height:1.55;}
+.ai-source{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:0.82rem;color:var(--text-2);}
+.ai-source label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+.ai-src-panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;}
+.ai-src-panel .input{height:34px;max-width:240px;}
+#ai-file{font-size:0.82rem;}
 
 .doc-wrap{padding:34px 24px 90px;display:flex;justify-content:center;}
 /* Direction B: the minutes are a self-contained light "paper" — always vellum, never themed,
