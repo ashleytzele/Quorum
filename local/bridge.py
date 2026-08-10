@@ -32,6 +32,22 @@ def _parse_projects(stdout):
     return [x.strip() for x in m.group(1).split(",") if x.strip()]
 
 
+_AUDIO_EXTS = {".m4a", ".mp3", ".wav", ".webm", ".mp4", ".ogg", ".aac", ".flac"}
+
+
+def _safe_audio_suffix(filename):
+    ext = Path(filename or "").suffix.lower()
+    return ext if ext in _AUDIO_EXTS else ".webm"
+
+
+def _generate_audio_argv(python, review_py, audio_path, meeting_id, template, out_path):
+    argv = [python, str(review_py), str(audio_path), "--meeting", meeting_id]
+    if template:
+        argv += ["-t", str(REPO_ROOT / f"{template}.json")]
+    argv += ["-o", str(out_path)]
+    return argv
+
+
 def create_app() -> Flask:
     app = Flask(__name__)
 
@@ -76,6 +92,44 @@ def create_app() -> Flask:
             finally:
                 if out.exists():
                     out.unlink()
+            return jsonify({"ok": True, "markdown": markdown,
+                            "projects": _parse_projects(r.stdout),
+                            "warnings": [l for l in (r.stderr or "").splitlines() if l.strip()]})
+        except Exception as e:
+            return (jsonify({"error": str(e)}), 500)
+
+    @app.route("/generate-audio", methods=["POST", "OPTIONS"])
+    def generate_audio():
+        if request.method == "OPTIONS":
+            return ("", 204)
+        meeting_id = request.form.get("meeting_id")
+        f = request.files.get("audio")
+        if not meeting_id or f is None:
+            return (jsonify({"error": "meeting_id and audio file required"}), 400)
+        template = request.form.get("template") or None
+        if template and not re.fullmatch(r"[A-Za-z0-9_-]+", template):
+            return (jsonify({"error": "invalid template name"}), 400)
+        try:
+            afd, atmp = tempfile.mkstemp(suffix=_safe_audio_suffix(f.filename))
+            os.close(afd)
+            audio = Path(atmp)
+            ofd, otmp = tempfile.mkstemp(suffix=".md")
+            os.close(ofd)
+            out = Path(otmp)
+            try:
+                f.save(str(audio))
+                argv = _generate_audio_argv(sys.executable, REPO_ROOT / "review.py",
+                                            audio, meeting_id, template, out)
+                r = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True)
+                if r.returncode != 0 or not out.exists() or not out.read_text().strip():
+                    return (jsonify({"error": (r.stderr or "generation failed").strip()}), 500)
+                markdown = out.read_text()
+            finally:
+                for p in (audio, out, audio.with_suffix(".manglish.txt")):
+                    try:
+                        p.unlink()
+                    except OSError:
+                        pass
             return jsonify({"ok": True, "markdown": markdown,
                             "projects": _parse_projects(r.stdout),
                             "warnings": [l for l in (r.stderr or "").splitlines() if l.strip()]})
