@@ -55,21 +55,38 @@ DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$TMPD/a.wav" |
 # them (measured on that file: 16 unique lines -> 54). Cost is a hard cut at each
 # boundary, which can clip a sentence. Raise WINDOW if that bothers you more than
 # the loops do.
-WINDOW=60
+# WINDOW overridable via WHISPER_WINDOW. Smaller = tighter loop-bounding but more model
+# reloads (slower); larger = far fewer reloads (faster) at some risk of a longer runaway.
+WINDOW="${WHISPER_WINDOW:-60}"
 OUT="${AUDIO%.*}.manglish.txt"
 
-{
-  off=0
-  while [ "$off" -lt "${DUR:-0}" ]; do
-    # --carry-initial-prompt: without it the glossary applies only to the first
-    # 30s window and decays to nothing over a long meeting.
-    whisper-cli -m "$MODEL" -f "$TMPD/a.wav" -l en -np \
-      --vad -vm "$VAD" -sns \
-      --prompt "$PROMPT" --carry-initial-prompt \
-      -ot $((off * 1000)) -d $((WINDOW * 1000)) 2>/dev/null
-    off=$((off + WINDOW))
-  done
-} | grep -ve '^[[:space:]]*$' \
-  | awk '{ t=$0; sub(/^\[[^]]*\][[:space:]]*/,"",t); if (t!=prev) print; prev=t }' > "$OUT"
+# Post-processing shared by both passes: drop blank lines, strip the [timestamp]
+# prefix, and collapse consecutive duplicate lines.
+_dedupe() { grep -ve '^[[:space:]]*$' \
+  | awk '{ t=$0; sub(/^\[[^]]*\][[:space:]]*/,"",t); if (t!=prev) print; prev=t }'; }
+
+if [ -n "${WHISPER_SINGLE_PASS:-}" ]; then
+  # SINGLE-PASS (opt-in, e.g. the interactive MeeTeam bridge): one whisper-cli call over
+  # the whole file — one model load instead of one per 60s window, so far faster on long
+  # audio. --carry-initial-prompt still carries the glossary across the whole file. Trade-off:
+  # no per-window loop-bounding, so noisy audio CAN repetition-collapse (see the windowed
+  # note below). The CLI default stays windowed; opt in only when speed beats that risk.
+  whisper-cli -m "$MODEL" -f "$TMPD/a.wav" -l en -np \
+    --vad -vm "$VAD" -sns \
+    --prompt "$PROMPT" --carry-initial-prompt 2>/dev/null | _dedupe > "$OUT"
+else
+  {
+    off=0
+    while [ "$off" -lt "${DUR:-0}" ]; do
+      # --carry-initial-prompt: without it the glossary applies only to the first
+      # 30s window and decays to nothing over a long meeting.
+      whisper-cli -m "$MODEL" -f "$TMPD/a.wav" -l en -np \
+        --vad -vm "$VAD" -sns \
+        --prompt "$PROMPT" --carry-initial-prompt \
+        -ot $((off * 1000)) -d $((WINDOW * 1000)) 2>/dev/null
+      off=$((off + WINDOW))
+    done
+  } | _dedupe > "$OUT"
+fi
 
 echo "wrote $OUT  ($(wc -l < "$OUT" | tr -d ' ') lines)"

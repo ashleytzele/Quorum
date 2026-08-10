@@ -22,10 +22,15 @@ _FAST_WHISPER = os.environ.get("BRIDGE_WHISPER_MODEL", str(
     / "models" / "ggml-large-v3-turbo-q5_0.bin"))
 
 
-def _transcribe_env():
+def _transcribe_env(fast=False):
+    """Env for the transcription subprocess. Default keeps review.py's accurate
+    windowed large-v3. `fast` (opt-in 'Fast draft') switches to single-pass + turbo:
+    ~5-8x faster but ~35-40% less content on hard/accented audio — measured."""
     env = dict(os.environ)
-    if Path(_FAST_WHISPER).exists():
-        env["WHISPER_MODEL"] = _FAST_WHISPER
+    if fast:
+        env["WHISPER_SINGLE_PASS"] = "1"
+        if Path(_FAST_WHISPER).exists():
+            env["WHISPER_MODEL"] = _FAST_WHISPER
     return env
 
 
@@ -126,6 +131,7 @@ def create_app() -> Flask:
         template = request.form.get("template") or None
         if template and not re.fullmatch(r"[A-Za-z0-9_-]+", template):
             return (jsonify({"error": "invalid template name"}), 400)
+        fast = bool(request.form.get("fast"))
         try:
             afd, atmp = tempfile.mkstemp(suffix=_safe_audio_suffix(f.filename))
             os.close(afd)
@@ -138,7 +144,7 @@ def create_app() -> Flask:
                 argv = _generate_audio_argv(sys.executable, REPO_ROOT / "review.py",
                                             audio, meeting_id, template, out)
                 r = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True,
-                                   env=_transcribe_env())
+                                   env=_transcribe_env(fast))
                 if r.returncode != 0 or not out.exists() or not out.read_text().strip():
                     return (jsonify({"error": (r.stderr or "generation failed").strip()}), 500)
                 markdown = out.read_text()
