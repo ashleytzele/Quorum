@@ -17,12 +17,20 @@ MEETEAM_ORIGIN = os.environ.get("MEETEAM_ORIGIN", "http://localhost:8000")
 _PROJECTS_RE = re.compile(r"^projects \(\d+\):\s*(.*)$", re.M)
 
 
+def _template_arg(template):
+    """Resolve a template stem to a `-t <path>` across ALL sources (repo + Meetily app
+    dirs), via review.py's Phase-8 resolver. Returns [] when not given or not found — then
+    review.py falls back to the meeting's stored template (also resolved across the union)."""
+    if not template:
+        return []
+    import review
+    p = review._find_template_path(template, REPO_ROOT)
+    return ["-t", str(p)] if p else []
+
+
 def _generate_argv(python, review_py, meetily_id, meeting_id, template, out_path):
-    argv = [python, str(review_py), "--meetily-app", meetily_id, "--meeting", meeting_id]
-    if template:
-        argv += ["-t", str(REPO_ROOT / f"{template}.json")]
-    argv += ["-o", str(out_path)]
-    return argv
+    return [python, str(review_py), "--meetily-app", meetily_id, "--meeting", meeting_id,
+            *_template_arg(template), "-o", str(out_path)]
 
 
 def _parse_projects(stdout):
@@ -41,11 +49,8 @@ def _safe_audio_suffix(filename):
 
 
 def _generate_audio_argv(python, review_py, audio_path, meeting_id, template, out_path):
-    argv = [python, str(review_py), str(audio_path), "--meeting", meeting_id]
-    if template:
-        argv += ["-t", str(REPO_ROOT / f"{template}.json")]
-    argv += ["-o", str(out_path)]
-    return argv
+    return [python, str(review_py), str(audio_path), "--meeting", meeting_id,
+            *_template_arg(template), "-o", str(out_path)]
 
 
 def create_app() -> Flask:
