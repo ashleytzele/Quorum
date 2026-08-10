@@ -83,6 +83,7 @@
           <label class="ai-rec">Mic <select class="input" id="ai-device"></select></label>
           <button class="btn btn-ghost" id="ai-rec-btn" type="button">● Record</button>
           <span id="ai-rec-time" class="page-sub"></span>
+          <span class="page-sub" style="flex-basis:100%;">Records the selected mic only — for online calls, use Import (or route system audio to a virtual input).</span>
         </div>
         <div class="ai-src-panel" data-src="import" style="display:none;">
           <input type="file" id="ai-file" accept="audio/*">
@@ -151,14 +152,21 @@
     document.querySelectorAll('.ai-src-panel').forEach(p => { p.style.display = p.dataset.src === s ? '' : 'none'; });
   }
   document.querySelectorAll('input[name="ai-source"]').forEach(r => r.addEventListener('change', function () {
+    if (mediaRec && mediaRec.state === 'recording') mediaRec.stop();
     showSourcePanels();
     if (currentSource() === 'record') listMics();
   }));
 
+  if (!window.MediaRecorder) {
+    const rr = document.querySelector('input[name="ai-source"][value="record"]');
+    if (rr && rr.closest('label')) rr.closest('label').style.display = 'none';
+  }
+
   async function listMics() {
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });   // prompt once so labels appear
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });   // prompt once so labels appear
       const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+      s.getTracks().forEach(t => t.stop());           // stop the probe stream — don't leave the mic live
       document.getElementById('ai-device').innerHTML =
         devs.map(d => '<option value="' + d.deviceId + '">' + esc(d.label || 'Microphone') + '</option>').join('');
     } catch (e) { aiStatus.className = 'ai-status is-err'; aiStatus.textContent = 'Mic access denied — use Import instead.'; }
