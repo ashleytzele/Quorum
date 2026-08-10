@@ -15,6 +15,18 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))          # so `import meetily_app` resolves
 MEETEAM_ORIGIN = os.environ.get("MEETEAM_ORIGIN", "http://localhost:8000")
 _PROJECTS_RE = re.compile(r"^projects \(\d+\):\s*(.*)$", re.M)
+# Faster whisper model for the interactive record/import path (nearly large-v3 accuracy,
+# ~5-8x faster). Overridable; only used if the file exists, else review.py keeps its default.
+_FAST_WHISPER = os.environ.get("BRIDGE_WHISPER_MODEL", str(
+    Path.home() / "Library" / "Application Support" / "com.meetily.ai"
+    / "models" / "ggml-large-v3-turbo-q5_0.bin"))
+
+
+def _transcribe_env():
+    env = dict(os.environ)
+    if Path(_FAST_WHISPER).exists():
+        env["WHISPER_MODEL"] = _FAST_WHISPER
+    return env
 
 
 def _template_arg(template):
@@ -125,7 +137,8 @@ def create_app() -> Flask:
                 f.save(str(audio))
                 argv = _generate_audio_argv(sys.executable, REPO_ROOT / "review.py",
                                             audio, meeting_id, template, out)
-                r = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True)
+                r = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True,
+                                   env=_transcribe_env())
                 if r.returncode != 0 or not out.exists() or not out.read_text().strip():
                     return (jsonify({"error": (r.stderr or "generation failed").strip()}), 500)
                 markdown = out.read_text()

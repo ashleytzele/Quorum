@@ -11,7 +11,9 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MODEL="$HOME/Library/Application Support/com.meetily.ai/models/ggml-large-v3-q5_0.bin"
+# Model is overridable via WHISPER_MODEL — the CLI keeps the accurate large-v3 default;
+# the MeeTeam bridge sets a faster model (large-v3-turbo) for interactive record/import.
+MODEL="${WHISPER_MODEL:-$HOME/Library/Application Support/com.meetily.ai/models/ggml-large-v3-q5_0.bin}"
 VAD="$DIR/ggml-silero-v5.1.2.bin"
 GLOSSARY="$DIR/glossary.txt"
 
