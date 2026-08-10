@@ -142,9 +142,21 @@ def _local_templates(script_dir):
     return sorted(Path(script_dir).glob("*.json"))
 
 
-def _read_template_meta(paths):
-    """Parse template JSON files -> [{stem, name, description}] for the registry.
-    Only files marked with a truthy top-level "registry" key are included."""
+DEFAULT_APP_TEMPLATES = Path("/Applications/meetily.app/Contents/Resources/templates")
+DEFAULT_APP_USER_TEMPLATES = Path.home() / "Library" / "Application Support" / "meetily" / "templates"
+
+
+def _app_template_dirs():
+    """Meetily app template dirs (user first, then bundled), env-overridable; existing only."""
+    user = Path(os.environ.get("MEETILY_APP_USER_TEMPLATES", DEFAULT_APP_USER_TEMPLATES))
+    bundled = Path(os.environ.get("MEETILY_APP_TEMPLATES", DEFAULT_APP_TEMPLATES))
+    return [d for d in (user, bundled) if d.is_dir()]
+
+
+def _read_template_meta(paths, requires_marker=True):
+    """Parse template JSON files -> [{stem, name, description}].
+    From the repo (requires_marker=True) only files with a truthy "registry" key;
+    from the app folders (requires_marker=False) every valid name+sections object."""
     rows = []
     for p in paths:
         p = Path(p)
@@ -153,13 +165,39 @@ def _read_template_meta(paths):
         except Exception as e:
             print(f"skip {p.name}: not valid JSON ({e})", file=sys.stderr)
             continue
-        if not isinstance(d, dict) or not d.get("registry"):
-            continue  # not a registry template (non-object JSON, or unmarked cruft) — skip
+        if not isinstance(d, dict):
+            continue
+        if requires_marker and not d.get("registry"):
+            continue
         if not d.get("name") or "sections" not in d:
-            print(f"skip {p.name}: marked registry but missing name/sections", file=sys.stderr)
+            if requires_marker:
+                print(f"skip {p.name}: marked registry but missing name/sections", file=sys.stderr)
             continue
         rows.append({"stem": p.stem, "name": d["name"], "description": d.get("description") or ""})
     return rows
+
+
+def all_templates(script_dir):
+    """Union of templates across sources, deduped by stem (repo > user > bundled)."""
+    seen, out = set(), []
+    repo_rows = _read_template_meta(_local_templates(script_dir), requires_marker=True)
+    app_rows = []
+    for d in _app_template_dirs():
+        app_rows += _read_template_meta(sorted(d.glob("*.json")), requires_marker=False)
+    for row in repo_rows + app_rows:
+        if row["stem"] in seen:
+            continue
+        seen.add(row["stem"])
+        out.append(row)
+    return out
+
+
+def _find_template_path(stem, script_dir):
+    for d in [Path(script_dir), *_app_template_dirs()]:
+        cand = d / f"{stem}.json"
+        if cand.exists():
+            return cand
+    return None
 
 
 def _sync_templates_via_quorum(rows):
@@ -185,15 +223,14 @@ def _status_best_effort(meeting_id, status):
 
 
 def resolve_template(explicit, meeting_template, script_dir):
-    """Pick the template path: explicit -t > meeting's stem > DEFAULT_TEMPLATE.
-    Exit if meeting_template names a stem with no local <stem>.json."""
+    """explicit -t > meeting's stem (found across repo + app dirs) > DEFAULT_TEMPLATE."""
     if explicit:
         return explicit
     if meeting_template:
-        cand = Path(script_dir) / f"{meeting_template}.json"
-        if not cand.exists():
-            avail = ", ".join(p.stem for p in _local_templates(script_dir)) or "(none)"
-            sys.exit(f"meeting template '{meeting_template}' has no {cand.name} here. Available: {avail}")
+        cand = _find_template_path(meeting_template, script_dir)
+        if cand is None:
+            avail = ", ".join(r["stem"] for r in all_templates(script_dir)) or "(none)"
+            sys.exit(f"template '{meeting_template}' not found in any source. Available: {avail}")
         return str(cand)
     return str(Path(script_dir) / DEFAULT_TEMPLATE)
 
@@ -232,7 +269,7 @@ def main(argv=None) -> None:
 
     if args.sync_templates:
         script_dir = Path(__file__).resolve().parent
-        rows = _read_template_meta(_local_templates(script_dir))
+        rows = all_templates(script_dir)
         synced = _sync_templates_via_quorum(rows)
         print(f"synced {len(synced)} templates")
         return
@@ -261,7 +298,7 @@ def main(argv=None) -> None:
             meeting_template = _meeting_template_via_quorum(args.meeting)
         if not args.dry_run:
             try:
-                _sync_templates_via_quorum(_read_template_meta(_local_templates(script_dir)))
+                _sync_templates_via_quorum(all_templates(script_dir))
             except Exception as e:
                 print(f"warning: template sync skipped ({e})", file=sys.stderr)
             _status_best_effort(args.meeting, "processing")

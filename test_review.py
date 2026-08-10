@@ -227,6 +227,8 @@ def test_status_write_failure_does_not_abort_generate(tmp_path, monkeypatch):
 
 def test_sync_templates_mode_reads_local_and_calls_quorum(tmp_path, monkeypatch, capsys):
     import review
+    monkeypatch.setenv("MEETILY_APP_TEMPLATES", str(tmp_path / "no-bundled"))
+    monkeypatch.setenv("MEETILY_APP_USER_TEMPLATES", str(tmp_path / "no-user"))
     sent = {}
     monkeypatch.setattr(review, "_local_templates",
                         lambda d: sorted(tmp_path.glob("*.json")))
@@ -272,3 +274,52 @@ def test_recording_or_meetily_app_required(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     with pytest.raises(SystemExit):
         review.main(["--dry-run"])      # neither a recording nor --meetily-app
+
+
+def _write_tpl(p, name, marker=False, extra=None):
+    import json as _json
+    d = {"name": name, "description": name.lower(), "sections": [{"title": "X", "instruction": "i", "format": "string"}]}
+    if marker:
+        d["registry"] = True
+    if extra:
+        d.update(extra)
+    p.write_text(_json.dumps(d))
+
+
+def test_all_templates_unions_repo_and_app(tmp_path, monkeypatch):
+    import review
+    repo = tmp_path / "repo"; user = tmp_path / "user"; bundled = tmp_path / "bundled"
+    for d in (repo, user, bundled): d.mkdir()
+    _write_tpl(repo / "weekly_review.json", "Weekly Review", marker=True)
+    _write_tpl(repo / "cruft.json", "Cruft No Marker", marker=False)          # repo: dropped (no marker)
+    _write_tpl(user / "weekly_progress_review.json", "Weekly Progress Review")  # app user: kept
+    _write_tpl(bundled / "daily_standup.json", "Daily Standup")                 # app bundled: kept
+    (bundled / "notjson.json").write_text("{ broken")                           # skipped
+    monkeypatch.setenv("MEETILY_APP_USER_TEMPLATES", str(user))
+    monkeypatch.setenv("MEETILY_APP_TEMPLATES", str(bundled))
+    stems = sorted(r["stem"] for r in review.all_templates(repo))
+    assert stems == ["daily_standup", "weekly_progress_review", "weekly_review"]  # cruft & broken excluded
+
+
+def test_all_templates_dedupe_repo_wins(tmp_path, monkeypatch):
+    import review
+    repo = tmp_path / "repo"; bundled = tmp_path / "bundled"
+    repo.mkdir(); bundled.mkdir()
+    _write_tpl(repo / "shared.json", "Repo Shared", marker=True)
+    _write_tpl(bundled / "shared.json", "Bundled Shared")
+    monkeypatch.setenv("MEETILY_APP_TEMPLATES", str(bundled))
+    monkeypatch.setenv("MEETILY_APP_USER_TEMPLATES", str(tmp_path / "nope"))   # missing dir -> skipped
+    rows = [r for r in review.all_templates(repo) if r["stem"] == "shared"]
+    assert len(rows) == 1 and rows[0]["name"] == "Repo Shared"                  # repo wins
+
+
+def test_resolve_template_finds_app_stem(tmp_path, monkeypatch):
+    import review
+    repo = tmp_path / "repo"; bundled = tmp_path / "bundled"
+    repo.mkdir(); bundled.mkdir()
+    _write_tpl(bundled / "retrospective.json", "Retrospective (Agile)")
+    monkeypatch.setenv("MEETILY_APP_TEMPLATES", str(bundled))
+    monkeypatch.setenv("MEETILY_APP_USER_TEMPLATES", str(tmp_path / "nope"))
+    assert review.resolve_template(None, "retrospective", repo) == str(bundled / "retrospective.json")
+    with pytest.raises(SystemExit):
+        review.resolve_template(None, "does_not_exist", repo)
