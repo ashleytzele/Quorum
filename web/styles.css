@@ -315,6 +315,22 @@ body.present-body{background:var(--bg);overflow:hidden;}
 .min-actions{display:flex;gap:10px;flex-wrap:wrap;}
 @media (max-width:520px){.min-actions{width:100%;}.min-actions .btn{flex:1;}}
 
+/* Meetily AI-generate panel (minutes page) */
+.ai-card{grid-column:1/-1;border:1px solid var(--border-strong);background:var(--surface-2);
+  border-radius:12px;padding:14px 16px;}
+.ai-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.ai-card-title{display:flex;align-items:center;gap:8px;font-weight:650;font-size:0.9rem;color:var(--text);}
+.ai-card-title .ai-spark{width:18px;height:18px;color:var(--accent);flex:none;}
+.ai-card-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.ai-rec{display:flex;align-items:center;gap:7px;font-size:0.78rem;font-weight:600;color:var(--text-2);white-space:nowrap;}
+.ai-rec .input{height:34px;max-width:220px;}
+.ai-status{font-size:0.8125rem;color:var(--text-2);margin-top:10px;min-height:1.1em;}
+.ai-status.is-busy{color:var(--accent-700);}
+.ai-status.is-ok{color:var(--ok);font-weight:600;}
+.ai-status.is-err{color:var(--danger);font-weight:600;}
+.ai-minutes{width:100%;margin-top:10px;min-height:340px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.82rem;line-height:1.55;}
+
 .doc-wrap{padding:34px 24px 90px;display:flex;justify-content:center;}
 /* Direction B: the minutes are a self-contained light "paper" — always vellum, never themed,
    so they read and print the same whether the app is in light or dark mode. */

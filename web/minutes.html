@@ -38,8 +38,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h17A1.5 1.5 0 0 1 22 4.5V8H2z"/><path d="m9 13 2 2 4-4"/></svg>
           Finalize &amp; archive
         </button>
-        <button class="btn btn-ghost" id="gen-ai" type="button" style="display:none;">Generate with Meetily</button>
-        <select class="input" id="ai-recording" style="display:none;max-width:240px;"></select>
       </div>
     </div>
     <div class="min-fields">
@@ -59,10 +57,25 @@
         <label class="label" for="decisions">Decisions <span style="color:var(--text-3);font-weight:500;">— one per line</span></label>
         <textarea class="textarea" id="decisions" rows="3" placeholder="One decision per line…"></textarea>
       </div>
-      <div id="ai-wrap" style="display:none;">
-        <label class="label">AI minutes (editable — review before finalizing)</label>
-        <textarea class="textarea" id="ai-minutes" rows="16" style="width:100%;"></textarea>
-        <div class="page-sub" id="ai-status"></div>
+      <div id="ai-wrap" class="ai-card" style="display:none;">
+        <div class="ai-card-head">
+          <div class="ai-card-title">
+            <svg class="ai-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.6 15l.85 2.55L22 18.4l-2.55.85L18.6 21.8l-.85-2.55L15.2 18.4l2.55-.85z"/></svg>
+            <span>Generate from Meetily</span>
+            <span class="pill">AI</span>
+          </div>
+          <div class="ai-card-controls">
+            <label class="ai-rec">Recording
+              <select class="input" id="ai-recording"></select>
+            </label>
+            <button class="btn btn-subtle" id="gen-ai" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
+              Generate
+            </button>
+          </div>
+        </div>
+        <div class="ai-status" id="ai-status"></div>
+        <textarea class="textarea ai-minutes" id="ai-minutes" rows="16" placeholder="Generated minutes appear here — review and edit before finalizing." style="display:none;"></textarea>
       </div>
     </div>
   </div>
@@ -127,14 +140,17 @@
         '<option value="' + esc(r.id) + '">' + esc(r.title || r.id) + '</option>').join('');
       const m = matchRecording(meeting, recs || []);
       if (m) recSel.value = m.id;
-      if ((recs || []).length) { genAiBtn.style.display = ''; recSel.style.display = ''; }
+      if ((recs || []).length) { aiWrap.style.display = ''; }
     }
   } catch (e) { /* bridge not running — leave AI button hidden, structured flow works */ }
 
   aiText.addEventListener('input', function () { aiMinutes = aiText.value; });
 
   genAiBtn.addEventListener('click', async function () {
-    aiStatus.textContent = 'generating…'; aiWrap.style.display = '';
+    genAiBtn.disabled = true;
+    aiText.style.display = '';
+    aiStatus.className = 'ai-status is-busy';
+    aiStatus.textContent = 'Generating from the recording and team notes…';
     try {
       const res = await fetch(window.BRIDGE_URL + '/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -143,9 +159,14 @@
       aiMinutes = res.markdown;
       aiText.value = res.markdown;
       document.getElementById('d-body').innerHTML = md.render(res.markdown);
-      aiStatus.textContent = 'projects (' + res.projects.length + '): ' + res.projects.join(', ');
+      const n = res.projects.length;
+      aiStatus.className = 'ai-status is-ok';
+      aiStatus.textContent = '✓ Generated — ' + n + (n === 1 ? ' project: ' : ' projects: ') + res.projects.join(', ');
     } catch (e) {
-      aiStatus.textContent = 'failed: ' + ((e && e.error) || 'error');
+      aiStatus.className = 'ai-status is-err';
+      aiStatus.textContent = 'Failed: ' + ((e && e.error) || 'error');
+    } finally {
+      genAiBtn.disabled = false;
     }
   });
 
