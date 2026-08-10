@@ -88,6 +88,9 @@
         <div class="ai-src-panel" data-src="import" style="display:none;">
           <input type="file" id="ai-file" accept="audio/*">
         </div>
+        <label id="ai-fast-wrap" style="display:none;align-items:center;gap:6px;margin-top:8px;font-size:0.8rem;color:var(--text-2);cursor:pointer;">
+          <input type="checkbox" id="ai-fast"> Fast draft — ~5× faster, less accurate (good for a quick pass you'll edit)
+        </label>
         <div class="ai-status" id="ai-status"></div>
         <textarea class="textarea ai-minutes" id="ai-minutes" rows="16" placeholder="Generated minutes appear here — review and edit before finalizing." style="display:none;"></textarea>
       </div>
@@ -150,6 +153,7 @@
   function showSourcePanels() {
     const s = currentSource();
     document.querySelectorAll('.ai-src-panel').forEach(p => { p.style.display = p.dataset.src === s ? '' : 'none'; });
+    document.getElementById('ai-fast-wrap').style.display = (s === 'record' || s === 'import') ? 'flex' : 'none';
   }
   document.querySelectorAll('input[name="ai-source"]').forEach(r => r.addEventListener('change', function () {
     if (mediaRec && mediaRec.state === 'recording') mediaRec.stop();
@@ -236,6 +240,7 @@
         fd.append('meeting_id', meeting.id);
         if (meeting.template) fd.append('template', meeting.template);
         fd.append('audio', blob, name);
+        if (document.getElementById('ai-fast').checked) fd.append('fast', '1');
         res = await fetch(window.BRIDGE_URL + '/generate-audio', { method: 'POST', body: fd })
           .then(async r => r.ok ? r.json() : Promise.reject(await r.json()));
       }
