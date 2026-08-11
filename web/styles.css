@@ -326,8 +326,11 @@ body.present-body{background:var(--bg);overflow:hidden;}
 /* =============================================================
    Minutes — control bar + formal document
    ============================================================= */
-.min-bar{position:sticky;top:0;z-index:10;background:var(--topbar-bg);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);}
-.min-bar-top{display:flex;align-items:center;gap:16px;padding:14px 0;}
+/* Only the slim action row pins; the tall part (edit fields + Generate-from-Meetily card) scrolls,
+   so the draft stays reachable while Refresh/Print/Finalize stay put. */
+.min-bar{border-bottom:1px solid var(--border);}
+.min-bar-top{position:sticky;top:0;z-index:12;background:var(--bg);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:16px;padding:14px 0 13px;}
 .min-fields{display:grid;grid-template-columns:1.5fr 1fr .9fr;gap:14px;padding:0 0 16px;align-items:end;}
 @media (max-width:820px){.min-fields{grid-template-columns:1fr 1fr;}}
 @media (max-width:520px){.min-fields{grid-template-columns:1fr;}}
