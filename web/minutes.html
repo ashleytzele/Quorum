@@ -72,18 +72,15 @@
           </div>
         </div>
         <div class="ai-source" role="radiogroup" aria-label="Audio source">
-          <label><input type="radio" name="ai-source" value="meetily" checked> Meetily recording</label>
-          <label><input type="radio" name="ai-source" value="record"> Record</label>
+          <label><input type="radio" name="ai-source" value="stored" checked> This meeting's recording</label>
+          <label><input type="radio" name="ai-source" value="meetily"> Meetily app</label>
           <label><input type="radio" name="ai-source" value="import"> Import</label>
         </div>
-        <div class="ai-src-panel" data-src="meetily">
-          <label class="ai-rec">Recording <select class="input" id="ai-recording"></select></label>
+        <div class="ai-src-panel" data-src="stored">
+          <label class="ai-rec">Recording <select class="input" id="ai-stored"></select></label>
         </div>
-        <div class="ai-src-panel" data-src="record" style="display:none;">
-          <label class="ai-rec">Mic <select class="input" id="ai-device"></select></label>
-          <button class="btn btn-ghost" id="ai-rec-btn" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg> Record</button>
-          <span id="ai-rec-time" class="page-sub"></span>
-          <span class="page-sub" style="flex-basis:100%;">Records the selected mic only — for online calls, use Import (or route system audio to a virtual input).</span>
+        <div class="ai-src-panel" data-src="meetily" style="display:none;">
+          <label class="ai-rec">Recording <select class="input" id="ai-recording"></select></label>
         </div>
         <div class="ai-src-panel" data-src="import" style="display:none;">
           <input type="file" id="ai-file" accept="audio/*" aria-label="Import audio file">
@@ -148,55 +145,31 @@
   const aiText = document.getElementById('ai-minutes');
   const aiStatus = document.getElementById('ai-status');
 
-  let recordedBlob = null, importedFile = null, mediaRec = null, recStream = null;
-  function currentSource() { return (document.querySelector('input[name="ai-source"]:checked') || {}).value || 'meetily'; }
+  let importedFile = null;
+  const storedSel = document.getElementById('ai-stored');
+  function currentSource() { return (document.querySelector('input[name="ai-source"]:checked') || {}).value || 'stored'; }
   function showSourcePanels() {
     const s = currentSource();
     document.querySelectorAll('.ai-src-panel').forEach(p => { p.style.display = p.dataset.src === s ? '' : 'none'; });
-    document.getElementById('ai-fast-wrap').style.display = (s === 'record' || s === 'import') ? 'flex' : 'none';
+    document.getElementById('ai-fast-wrap').style.display = (s === 'stored' || s === 'import') ? 'flex' : 'none';
   }
-  document.querySelectorAll('input[name="ai-source"]').forEach(r => r.addEventListener('change', function () {
-    if (mediaRec && mediaRec.state === 'recording') mediaRec.stop();
-    showSourcePanels();
-    if (currentSource() === 'record') listMics();
-  }));
+  document.querySelectorAll('input[name="ai-source"]').forEach(r => r.addEventListener('change', showSourcePanels));
 
-  if (!window.MediaRecorder) {
-    const rr = document.querySelector('input[name="ai-source"][value="record"]');
-    if (rr && rr.closest('label')) rr.closest('label').style.display = 'none';
+  // "This meeting's recording" — list what was recorded on the Admin page (Supabase storage).
+  function recLabel(name) {
+    const ts = parseInt((name || '').split('.')[0], 10);
+    return isNaN(ts) ? esc(name) : esc(new Date(ts).toLocaleString());
   }
-
-  async function listMics() {
+  async function loadStoredRecordings() {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ audio: true });   // prompt once so labels appear
-      const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
-      s.getTracks().forEach(t => t.stop());           // stop the probe stream — don't leave the mic live
-      document.getElementById('ai-device').innerHTML =
-        devs.map(d => '<option value="' + d.deviceId + '">' + esc(d.label || 'Microphone') + '</option>').join('');
-    } catch (e) { aiStatus.className = 'ai-status is-err'; aiStatus.textContent = 'Mic access denied — use Import instead.'; }
+      const { data } = await supa.storage.from('submissions')
+        .list('recordings/' + meeting.id, { sortBy: { column: 'name', order: 'desc' } });
+      const recs = (data || []).filter(f => f.name && !f.name.startsWith('.'));
+      storedSel.innerHTML = recs.length
+        ? recs.map(f => '<option value="recordings/' + meeting.id + '/' + esc(f.name) + '">' + recLabel(f.name) + '</option>').join('')
+        : '<option value="">No recording yet — record it on the Admin page</option>';
+    } catch (e) { storedSel.innerHTML = '<option value="">Couldn’t load recordings</option>'; }
   }
-
-  // Record/stop icons (inline SVG) so the transport button matches the SVG icon vocabulary, not ●/■ glyphs.
-  var REC_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg>';
-  var STOP_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>';
-  document.getElementById('ai-rec-btn').addEventListener('click', async function () {
-    const btn = this;
-    if (mediaRec && mediaRec.state === 'recording') { mediaRec.stop(); return; }
-    try {
-      const deviceId = document.getElementById('ai-device').value;
-      recStream = await navigator.mediaDevices.getUserMedia({ audio: deviceId ? { deviceId } : true });
-      const chunks = [];
-      mediaRec = new MediaRecorder(recStream);
-      mediaRec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-      mediaRec.onstop = function () {
-        recordedBlob = new Blob(chunks, { type: mediaRec.mimeType });
-        recStream.getTracks().forEach(t => t.stop());
-        btn.innerHTML = REC_ICON + ' Record'; document.getElementById('ai-rec-time').textContent = 'recorded ✓';
-      };
-      mediaRec.start(); recordedBlob = null;
-      btn.innerHTML = STOP_ICON + ' Stop'; document.getElementById('ai-rec-time').textContent = 'recording…';
-    } catch (e) { aiStatus.className = 'ai-status is-err'; aiStatus.textContent = 'Could not start recording.'; }
-  });
 
   document.getElementById('ai-file').addEventListener('change', function (e) { importedFile = e.target.files[0] || null; });
 
@@ -210,12 +183,11 @@
       const m = matchRecording(meeting, recs || []);
       if (m) recSel.value = m.id;
       aiWrap.style.display = '';
+      await loadStoredRecordings();
       if (!(recs || []).length) {
-        // No Meetily recordings — Record/Import don't need any, so keep the card but drop
-        // the Meetily source entirely (its select has nothing to offer).
+        // No Meetily-app recordings — hide that source; "This meeting's recording" is the default.
         document.querySelector('input[name="ai-source"][value="meetily"]').closest('label').style.display = 'none';
         document.querySelector('.ai-src-panel[data-src="meetily"]').style.display = 'none';
-        document.querySelector('input[name="ai-source"][value="record"]').checked = true;
       }
       showSourcePanels();
     }
@@ -236,9 +208,18 @@
           body: JSON.stringify({ meeting_id: meeting.id, meetily_id: recSel.value, template: meeting.template || null })
         }).then(async r => r.ok ? r.json() : Promise.reject(await r.json()));
       } else {
-        const blob = src === 'record' ? recordedBlob : importedFile;
-        if (!blob) throw { error: src === 'record' ? 'Record something first.' : 'Choose an audio file first.' };
-        const name = src === 'record' ? ('recording.' + recordingExt(blob.type)) : blob.name;
+        let blob, name;
+        if (src === 'import') {
+          blob = importedFile;
+          if (!blob) throw { error: 'Choose an audio file first.' };
+          name = blob.name;
+        } else {   // stored — pull this meeting's recording from Supabase
+          const path = storedSel.value;
+          if (!path) throw { error: 'No recording yet — record the meeting on the Admin page.' };
+          const url = await signedUrl(path);
+          blob = await fetch(url).then(r => r.blob());
+          name = path.split('/').pop();
+        }
         const fd = new FormData();
         fd.append('meeting_id', meeting.id);
         if (meeting.template) fd.append('template', meeting.template);
