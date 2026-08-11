@@ -53,10 +53,6 @@
         <label class="label" for="min-date">Date</label>
         <input class="input" type="date" id="min-date" value="">
       </div>
-      <div class="field decisions-field">
-        <label class="label" for="decisions">Decisions <span style="color:var(--text-3);font-weight:500;">— one per line</span></label>
-        <textarea class="textarea" id="decisions" rows="3" placeholder="One decision per line…"></textarea>
-      </div>
       <div id="ai-wrap" class="ai-card" style="display:none;">
         <div class="ai-card-head">
           <div class="ai-card-title" role="heading" aria-level="2">
@@ -127,7 +123,6 @@
   const org = document.getElementById('min-org');
   const title = document.getElementById('min-title');
   const date = document.getElementById('min-date');
-  const dec = document.getElementById('decisions');
 
   const mParam = new URLSearchParams(location.search).get('meeting');
   const meeting = mParam
@@ -253,8 +248,6 @@
     if(isNaN(d)) return v;
     return d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   }
-  function decisionLines(){ return (dec.value || '').split('\n').map(s => s.replace(/^[-•\s]+/, '').trim()).filter(Boolean); }
-
   function generate(){
     document.getElementById('d-org').textContent = org.value.trim() || 'Organization';
     document.getElementById('d-title').textContent = title.value.trim() || 'Meeting Title';
@@ -273,11 +266,6 @@
         html += c ? md.render(c) : '<p style="color:#5c6473;">No updates this week.</p>';
       });
     }
-    html += '<h2 class="sec">Decisions</h2>';
-    const lines = decisionLines();
-    html += lines.length
-      ? '<ul>' + lines.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul>'
-      : '<p style="color:#5c6473;">No decisions were recorded.</p>';
     document.getElementById('d-body').innerHTML = html;
   }
 
@@ -287,18 +275,16 @@
     if (isVip) {
       const out = ['# ' + (title.value || 'Meeting Minutes'), ''];
       if (org.value) out.push('**Organization:** ' + org.value);
-      out.push('**Date:** ' + (date.value || ''), '', (noteFor(vipTeamId).trim() || '_No content_'),
-        '', '## Decisions', '', (dec.value.trim() || '_None recorded_'));
+      out.push('**Date:** ' + (date.value || ''), '', (noteFor(vipTeamId).trim() || '_No content_'));
       return out.join('\n');
     }
     return buildMinutesMarkdown({
       org: org.value, title: title.value, date: date.value,
       teams: (teams || []).map(t => ({ team: t.name, notes: noteFor(t.id) })),
-      decisions: dec.value,
     });
   }
 
-  [org, title, date, dec].forEach(el => el.addEventListener('input', generate));
+  [org, title, date].forEach(el => el.addEventListener('input', generate));
   document.getElementById('generate').addEventListener('click', generate);
   // Print / Save PDF is non-destructive — render + print, repeatable, no side effects.
   document.getElementById('print').addEventListener('click', function(){

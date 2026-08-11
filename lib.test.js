@@ -63,14 +63,13 @@ test('buildMinutesMarkdown fills template with empty fallbacks', () => {
       { team: 'Tech', notes: 'Shipped login.' },
       { team: 'R&D', notes: '   ' },
     ],
-    decisions: '',
   });
   assert.match(md, /# Weekly Sync/);
   assert.match(md, /\*\*Organization:\*\* Ospit/);
   assert.match(md, /\*\*Date:\*\* 2026-07-03/);
   assert.match(md, /### Tech\n\nShipped login\./);
   assert.match(md, /### R&D\n\n_No updates this week_/);
-  assert.match(md, /## Decisions\n\n_None recorded_/);
+  assert.doesNotMatch(md, /## Decisions/);   // decisions removed — AI minutes carry their own
 });
 
 const { meetingStatus } = require('./web/lib.js');

@@ -47,7 +47,7 @@ function groupFilesByTeam(files) {
     .map(([team, files]) => ({ team, files }));
 }
 
-function buildMinutesMarkdown({ org, title, date, teams, decisions }) {
+function buildMinutesMarkdown({ org, title, date, teams }) {
   const out = [`# ${title || 'Meeting Minutes'}`, ''];
   if (org) out.push(`**Organization:** ${org}`);
   out.push(`**Date:** ${date || ''}`, '', '## Team Updates', '');
@@ -55,8 +55,6 @@ function buildMinutesMarkdown({ org, title, date, teams, decisions }) {
     out.push(`### ${t.team}`, '');
     out.push(t.notes && t.notes.trim() ? t.notes.trim() : '_No updates this week_', '');
   }
-  out.push('## Decisions', '');
-  out.push(decisions && decisions.trim() ? decisions.trim() : '_None recorded_', '');
   return out.join('\n');
 }
 
