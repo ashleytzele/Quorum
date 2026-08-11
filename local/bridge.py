@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Local bridge for MeeTeam's admin minutes page. Shells the existing review.py
+"""Local bridge for Quorum's admin minutes page. Shells the existing review.py
 (--meetily-app transcript + --meeting team-notes + template) and returns markdown.
-Binds 127.0.0.1 only; CORS-allows the MeeTeam origin. Reuses review.py/quorum/
+Binds 127.0.0.1 only; CORS-allows the Quorum origin. Reuses review.py/quorum/
 meetily_app unchanged — this file adds no pipeline logic."""
 import os
 import re
@@ -13,7 +13,8 @@ from flask import Flask, request, jsonify
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))          # so `import meetily_app` resolves
-MEETEAM_ORIGIN = os.environ.get("MEETEAM_ORIGIN", "http://localhost:8000")
+# QUORUM_ORIGIN sets the CORS allow-origin. MEETEAM_ORIGIN kept as a fallback so an existing .env doesn't break.
+QUORUM_ORIGIN = os.environ.get("QUORUM_ORIGIN", os.environ.get("MEETEAM_ORIGIN", "http://localhost:8000"))
 _PROJECTS_RE = re.compile(r"^projects \(\d+\):\s*(.*)$", re.M)
 # Faster whisper model for the interactive record/import path (nearly large-v3 accuracy,
 # ~5-8x faster). Overridable; only used if the file exists, else review.py keeps its default.
@@ -75,7 +76,7 @@ def create_app() -> Flask:
 
     @app.after_request
     def _cors(resp):
-        resp.headers["Access-Control-Allow-Origin"] = MEETEAM_ORIGIN
+        resp.headers["Access-Control-Allow-Origin"] = QUORUM_ORIGIN
         resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
         resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
         return resp

@@ -12,7 +12,7 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Model is overridable via WHISPER_MODEL — the CLI keeps the accurate large-v3 default;
-# the MeeTeam bridge sets a faster model (large-v3-turbo) for interactive record/import.
+# the Quorum bridge sets a faster model (large-v3-turbo) for interactive record/import.
 MODEL="${WHISPER_MODEL:-$HOME/Library/Application Support/com.meetily.ai/models/ggml-large-v3-q5_0.bin}"
 VAD="$DIR/ggml-silero-v5.1.2.bin"
 GLOSSARY="$DIR/glossary.txt"
@@ -66,7 +66,7 @@ _dedupe() { grep -ve '^[[:space:]]*$' \
   | awk '{ t=$0; sub(/^\[[^]]*\][[:space:]]*/,"",t); if (t!=prev) print; prev=t }'; }
 
 if [ -n "${WHISPER_SINGLE_PASS:-}" ]; then
-  # SINGLE-PASS (opt-in, e.g. the interactive MeeTeam bridge): one whisper-cli call over
+  # SINGLE-PASS (opt-in, e.g. the interactive Quorum bridge): one whisper-cli call over
   # the whole file — one model load instead of one per 60s window, so far faster on long
   # audio. --carry-initial-prompt still carries the glossary across the whole file. Trade-off:
   # no per-window loop-bounding, so noisy audio CAN repetition-collapse (see the windowed

@@ -91,6 +91,6 @@ heading in that notes doc. `gpt-4o-mini` is the default and is as good as
 
 ## Phases
 1. This CLI (done).
-2. Wire into MeeTeam/Quorum: notes from its store, review into Minutes/History.
+2. Wire into Quorum: notes from its store, review into Minutes/History.
 3. Fully local (drop Supabase) — later, only if true offline is needed.
 See `docs/superpowers/specs/`.
