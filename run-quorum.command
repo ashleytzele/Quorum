@@ -2,7 +2,8 @@
 # Double-click to run Quorum. Starts BOTH pieces and opens the Admin console:
 #   • Quorum web app  → http://localhost:8000   (served from QUORUM_WEB_DIR)
 #   • Generate bridge → http://localhost:8899   (this repo)
-# Keep this window open while you work. Close it (or press Ctrl-C) to stop both.
+# Already-running servers are reused (not fought over). Close this window
+# (or Ctrl-C) to stop whatever THIS launcher started.
 #
 # ponytail: the web folder defaults to the usual location; override if you moved it:
 #   QUORUM_WEB_DIR=/path/to/Quorum/web ./run-quorum.command
@@ -13,6 +14,7 @@ WEB_DIR="${QUORUM_WEB_DIR:-$HOME/Desktop/Github/MeeTeam/web}"
 WEB_PORT="${QUORUM_WEB_PORT:-8000}"
 BRIDGE_PORT=8899
 pause(){ read -r -p "Press Return to close this window. " _; }
+up(){ curl -sf -o /dev/null "http://localhost:$1/$2"; }   # up <port> <path>
 
 if [ ! -d "$WEB_DIR" ]; then
   echo "Can't find the Quorum web folder: $WEB_DIR"
@@ -28,8 +30,13 @@ if [ ! -x .venv/bin/python ]; then
 fi
 set -a; [ -f .env ] && . ./.env; set +a
 
-# 1) Web app — static server with no-store headers so edits always show on reload.
-python3 - "$WEB_PORT" "$WEB_DIR" <<'PY' >/dev/null 2>&1 &
+WEB_PID=""; BRIDGE_PID=""
+
+# 1) Web app — reuse if a server already answers on the port, else start our own.
+if up "$WEB_PORT" "index.html"; then
+  WEB_STATE="already running (reused)"
+else
+  python3 - "$WEB_PORT" "$WEB_DIR" <<'PY' >/dev/null 2>&1 &
 import sys, http.server, socketserver
 port, root = int(sys.argv[1]), sys.argv[2]
 class H(http.server.SimpleHTTPRequestHandler):
@@ -39,26 +46,36 @@ class H(http.server.SimpleHTTPRequestHandler):
 socketserver.TCPServer.allow_reuse_address = True
 socketserver.TCPServer(("", port), H).serve_forever()
 PY
-WEB_PID=$!
+  WEB_PID=$!; WEB_STATE="started"
+fi
 
-# 2) Generate bridge (AI minutes). The app degrades gracefully if this is down.
-QUORUM_ORIGIN="${QUORUM_ORIGIN:-http://localhost:$WEB_PORT}" ./.venv/bin/python local/bridge.py >/dev/null 2>&1 &
-BRIDGE_PID=$!
+# 2) Generate bridge — reuse if up, else start (app degrades gracefully if absent).
+if up "$BRIDGE_PORT" "health"; then
+  :
+else
+  QUORUM_ORIGIN="${QUORUM_ORIGIN:-http://localhost:$WEB_PORT}" ./.venv/bin/python local/bridge.py >/dev/null 2>&1 &
+  BRIDGE_PID=$!
+fi
 
-trap 'echo; echo "Stopping Quorum…"; kill "$WEB_PID" "$BRIDGE_PID" 2>/dev/null' EXIT INT TERM
+# Stop ONLY what this launcher started (never kill servers we reused).
+cleanup(){ echo; echo "Stopping Quorum (services this launcher started)…"
+  [ -n "$WEB_PID" ] && kill "$WEB_PID" 2>/dev/null
+  [ -n "$BRIDGE_PID" ] && kill "$BRIDGE_PID" 2>/dev/null; }
+trap cleanup EXIT
+trap 'exit 0' INT TERM
 
-# Wait for the web server, then open the browser.
-for _ in $(seq 1 25); do curl -sf -o /dev/null "http://localhost:$WEB_PORT/index.html" && break; sleep 0.3; done
-# Bridge readiness (non-fatal).
-BRIDGE_STATE="offline — start it later if you want AI generation"
-for _ in $(seq 1 25); do curl -sf -o /dev/null "http://localhost:$BRIDGE_PORT/health" && { BRIDGE_STATE="ready"; break; }; sleep 0.3; done
+# Wait for the web server to answer, then open the browser.
+for _ in $(seq 1 25); do up "$WEB_PORT" "index.html" && break; sleep 0.3; done
+if up "$BRIDGE_PORT" "health"; then BRIDGE_STATE="ready"; else BRIDGE_STATE="offline — AI generation off"; fi
 
 open "http://localhost:$WEB_PORT/admin.html"
 echo
 echo "  Quorum is running ─────────────────────────────"
-echo "   • Web app    http://localhost:$WEB_PORT   (Admin console)"
+echo "   • Web app    http://localhost:$WEB_PORT   ($WEB_STATE)"
 echo "   • Generator  http://localhost:$BRIDGE_PORT   [$BRIDGE_STATE]"
 echo "  ────────────────────────────────────────────────"
-echo "  Keep this window open. Close it (or Ctrl-C) to stop both."
+echo "  Keep this window open. Close it (or Ctrl-C) to stop."
 echo
-wait
+
+# Hold the window open even if both were reused (nothing of ours to wait on).
+while :; do sleep 3600; done
