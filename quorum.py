@@ -3,10 +3,19 @@
 notes, and publish the finished review to its minutes. All network access lives
 here; review.py's core stays offline-testable."""
 
+import ipaddress
 import os
+import socket
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
+
+# Public-link fetching (opt-out via QUORUM_FETCH_LINKS=0). Caps keep one page from
+# blowing up the prompt; the timeout/size bounds keep a slow or huge link from stalling.
+_LINK_CAP = int(os.environ.get("QUORUM_LINK_CAP", "6000"))        # chars of text kept per link
+_LINK_TIMEOUT = float(os.environ.get("QUORUM_LINK_TIMEOUT", "10"))  # seconds per request
+_LINK_MAX_BYTES = 3_000_000                                        # download ceiling per link
 
 
 def _combine_inputs(pre_notes, file_texts, links, during_notes=()) -> str:
@@ -34,6 +43,95 @@ def _combine_inputs(pre_notes, file_texts, links, during_notes=()) -> str:
     return "\n".join(parts).strip()
 
 
+def _host_is_public(host: str) -> bool:
+    """True only if EVERY resolved address is a routable public IP. Blocks SSRF to
+    localhost / private / link-local (incl. cloud metadata 169.254.169.254) / reserved."""
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        return False
+    if not infos:
+        return False
+    for *_, sockaddr in infos:
+        try:
+            ip = ipaddress.ip_address(sockaddr[0])
+        except ValueError:
+            return False
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            return False
+    return True
+
+
+def _ext_for(content_type: str, url: str) -> str:
+    ct = (content_type or "").split(";")[0].strip().lower()
+    known = {"text/html": ".html", "application/xhtml+xml": ".html",
+             "application/pdf": ".pdf", "text/plain": ".txt"}
+    if ct in known:
+        return known[ct]
+    suf = Path(urlparse(url).path).suffix.lower()
+    return suf if suf in (".html", ".htm", ".pdf", ".txt", ".md") else ".html"
+
+
+def fetch_link_text(url: str):
+    """Fetch a PUBLIC http(s) link and return its markitdown-converted text (capped),
+    or None if it can't be fetched safely/successfully — the caller then falls back to
+    the bare URL. Public only: private/localhost hosts are refused and EVERY redirect hop
+    is re-validated before connecting. ponytail: DNS can rebind between the check and the
+    connect; acceptable for a local single-user tool — pin the resolved IP via a custom
+    adapter if this ever serves multiple tenants."""
+    try:
+        import requests
+        from markitdown import MarkItDown
+    except Exception:
+        return None
+    current = url
+    for _hop in range(5):
+        p = urlparse(current)
+        if p.scheme not in ("http", "https") or not p.hostname:
+            return None
+        if not _host_is_public(p.hostname):
+            return None
+        try:
+            r = requests.get(current, timeout=_LINK_TIMEOUT, stream=True,
+                             allow_redirects=False,
+                             headers={"User-Agent": "Quorum-minutes/1.0"})
+        except Exception:
+            return None
+        try:
+            if r.is_redirect or r.is_permanent_redirect:
+                loc = r.headers.get("location")
+                if not loc:
+                    return None
+                current = urljoin(current, loc)
+                continue
+            if r.status_code != 200:
+                return None
+            body = r.raw.read(_LINK_MAX_BYTES + 1, decode_content=True)
+        except Exception:
+            return None
+        finally:
+            r.close()
+        if not body or len(body) > _LINK_MAX_BYTES:
+            return None
+        fd, tmp = tempfile.mkstemp(suffix=_ext_for(r.headers.get("content-type", ""), current))
+        try:
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(body)
+            text = (MarkItDown().convert(tmp).text_content or "").strip()
+        except Exception:
+            return None
+        finally:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+        if not text:
+            return None
+        return text[:_LINK_CAP].rstrip() + "\n…[truncated]" if len(text) > _LINK_CAP else text
+    return None  # too many redirects
+
+
 def _client():
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_KEY")
@@ -57,10 +155,19 @@ def fetch_notes(meeting_id: str) -> str:
                 .eq("meeting_id", meeting_id).execute().data) or []
     from markitdown import MarkItDown
     md = MarkItDown()
+    fetch_links = os.environ.get("QUORUM_FETCH_LINKS", "1") != "0"
     file_texts, links = [], []
     for s in sub_rows:
         if s.get("mime") == "link" or (s.get("url") and not s.get("file_path")):
-            links.append((s.get("file_name") or s.get("url"), s.get("url")))
+            url = s.get("url")
+            label = s.get("file_name") or url
+            text = fetch_link_text(url) if (fetch_links and url) else None
+            if text:
+                # Fetched public link → include its content like an attached document.
+                file_texts.append((f"link: {label} — {url}", text))
+            else:
+                # Private/unreachable/disabled → keep the bare URL (today's behavior).
+                links.append((label, url))
             continue
         if not s.get("file_path"):
             continue

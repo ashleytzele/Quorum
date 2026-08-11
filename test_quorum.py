@@ -109,3 +109,51 @@ def test_publish_minutes_sets_published_status(monkeypatch):
     assert captured["payload"]["status"] == "published"
     assert captured["payload"]["is_active"] is False
     assert captured["payload"]["minutes_final"] == "# Minutes"
+
+
+# ---- Public-link fetching ----
+
+def _fake_client(note_rows, sub_rows):
+    class FakeExec:
+        def __init__(self, data): self.data = data
+    class FakeTable:
+        def __init__(self, data): self._data = data
+        def select(self, *a): return self
+        def eq(self, *a): return self
+        def execute(self): return FakeExec(self._data)
+    class FakeClient:
+        def table(self, name):
+            return FakeTable(note_rows if name == "notes" else sub_rows)
+    return FakeClient()
+
+
+def test_fetch_link_text_rejects_non_public():
+    # SSRF guard: private/localhost/link-local hosts and non-http schemes never fetch.
+    from quorum import fetch_link_text
+    for bad in ["http://localhost/x", "http://127.0.0.1/", "http://192.168.1.10/",
+                "http://169.254.169.254/latest/meta-data/", "http://10.0.0.1/",
+                "ftp://example.com/x", "file:///etc/passwd", "https://[::1]/"]:
+        assert fetch_link_text(bad) is None, bad
+
+
+def test_fetch_notes_link_fetched_becomes_document(monkeypatch):
+    import quorum
+    monkeypatch.setattr(quorum, "_client", lambda: _fake_client(
+        note_rows=[{"pre_note": "p", "content": "", "teams": {"name": "WCE"}}],
+        sub_rows=[{"mime": "link", "url": "https://pub.test/doc",
+                   "file_name": "Spec", "file_path": None}]))
+    monkeypatch.setattr(quorum, "fetch_link_text", lambda url: "FETCHED BODY")
+    out = quorum.fetch_notes("MID")
+    assert "link: Spec — https://pub.test/doc" in out and "FETCHED BODY" in out
+
+
+def test_fetch_notes_link_falls_back_to_url_when_not_fetchable(monkeypatch):
+    import quorum
+    monkeypatch.setattr(quorum, "_client", lambda: _fake_client(
+        note_rows=[{"pre_note": "p", "content": "", "teams": {"name": "WCE"}}],
+        sub_rows=[{"mime": "link", "url": "https://priv.test/doc",
+                   "file_name": "Spec", "file_path": None}]))
+    monkeypatch.setattr(quorum, "fetch_link_text", lambda url: None)   # e.g. auth-gated
+    out = quorum.fetch_notes("MID")
+    assert "--- link: Spec ---" in out and "https://priv.test/doc" in out
+    assert "FETCHED" not in out
