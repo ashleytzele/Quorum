@@ -60,6 +60,7 @@ img{max-width:100%;display:block;}
 
 /* ---- Layout ---- */
 .container{max-width:var(--maxw);margin:0 auto;padding:0 24px;width:100%;}
+.container-wide{max-width:1360px;}   /* admin console — more working room for sidebar + workspace */
 .page{min-height:100vh;display:flex;flex-direction:column;}
 .main{flex:1;padding:30px 0 60px;}
 .grid-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
@@ -422,7 +423,7 @@ body.present-body{background:var(--bg);overflow:hidden;}
 .mt-status-published{background:var(--ok-50);color:var(--ok);}
 
 /* ---- Admin console: sidebar (meeting list) + workspace ---- */
-.console-layout{display:grid;grid-template-columns:290px 1fr;gap:24px;align-items:start;}
+.console-layout{display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start;}
 .console-side{display:flex;flex-direction:column;}
 .console-main{min-width:0;}
 .mlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
