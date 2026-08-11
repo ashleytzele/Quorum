@@ -128,7 +128,15 @@
   const meeting = mParam
     ? ((await supa.from('meetings').select('*').eq('id', mParam).maybeSingle()).data || await selectedMeeting())
     : await selectedMeeting();
-  if (!meeting) { document.getElementById('d-title').textContent = 'No active meeting'; return; }
+  if (!meeting) {
+    document.getElementById('d-title').textContent = 'No meeting selected';
+    document.getElementById('d-body').innerHTML =
+      '<p style="color:#5c6473;">There’s no active meeting to write minutes for. ' +
+      '<a href="admin.html" style="color:oklch(41% 0.165 267);font-weight:600;">Open the Admin console</a> to create or pick one.</p>';
+    var mf = document.querySelector('.min-fields'); if (mf) mf.style.display = 'none';   // fields/actions do nothing
+    var ma = document.querySelector('.min-actions'); if (ma) ma.style.display = 'none';  // without a meeting — hide them
+    return;
+  }
   org.value = meeting.org || '';
   title.value = meeting.title || '';
   date.value = meeting.meeting_date || '';
@@ -169,31 +177,43 @@
 
   document.getElementById('ai-file').addEventListener('change', function (e) { importedFile = e.target.files[0] || null; });
 
-  // Health-gate: only show the AI button if the local bridge is running.
+  // Always show the AI card. If the local bridge is down, disable Generate and say why
+  // (instead of hiding the whole feature with no explanation).
+  aiWrap.style.display = '';
+  await loadStoredRecordings();                       // Supabase — works with or without the bridge
+  let bridgeOk = false;
   try {
     const h = await fetch(window.BRIDGE_URL + '/health', { signal: AbortSignal.timeout(1500) }).then(r => r.json());
-    if (h && h.ok) {
+    bridgeOk = !!(h && h.ok);
+  } catch (e) { bridgeOk = false; }
+  if (bridgeOk) {
+    try {
       const recs = await fetch(window.BRIDGE_URL + '/recordings', { signal: AbortSignal.timeout(1500) }).then(r => r.json());
       recSel.innerHTML = (recs || []).map(r =>
         '<option value="' + esc(r.id) + '">' + esc(r.title || r.id) + '</option>').join('');
       const m = matchRecording(meeting, recs || []);
       if (m) recSel.value = m.id;
-      aiWrap.style.display = '';
-      await loadStoredRecordings();
-      if (!(recs || []).length) {
-        // No Meetily-app recordings — hide that source; "This meeting's recording" is the default.
+      if (!(recs || []).length) {                    // no Meetily-app recordings → hide that source
         document.querySelector('input[name="ai-source"][value="meetily"]').closest('label').style.display = 'none';
         document.querySelector('.ai-src-panel[data-src="meetily"]').style.display = 'none';
       }
-      showSourcePanels();
-    }
-  } catch (e) { /* bridge not running — leave AI button hidden, structured flow works */ }
+    } catch (e) { /* recordings list failed but bridge is up — generation still works */ }
+  } else {
+    // Bridge offline: the Meetily source needs it to list, and generation needs it — disable + explain.
+    document.querySelector('input[name="ai-source"][value="meetily"]').closest('label').style.display = 'none';
+    document.querySelector('.ai-src-panel[data-src="meetily"]').style.display = 'none';
+    genAiBtn.disabled = true;
+    aiStatus.className = 'ai-status is-err';
+    aiStatus.textContent = 'Local generator offline — run run-bridge.command, then reload to generate from a recording.';
+  }
+  showSourcePanels();
 
   aiText.addEventListener('input', function () { aiMinutes = aiText.value; });
 
   genAiBtn.addEventListener('click', async function () {
     const src = currentSource();
-    genAiBtn.disabled = true; aiText.style.display = '';
+    const genLabel = genAiBtn.innerHTML;
+    genAiBtn.disabled = true; genAiBtn.textContent = 'Generating…'; aiText.style.display = '';
     aiStatus.className = 'ai-status is-busy';
     aiStatus.textContent = src === 'meetily' ? 'Generating…' : 'Transcribing + generating… (this can take a minute)';
     try {
@@ -232,9 +252,10 @@
       aiStatus.textContent = '✓ Generated — ' + n + (n === 1 ? ' project: ' : ' projects: ') + res.projects.join(', ');
     } catch (e) {
       aiStatus.className = 'ai-status is-err';
-      aiStatus.textContent = 'Failed: ' + ((e && e.error) || 'error');
+      aiStatus.textContent = 'Failed: ' + ((e && e.error) || (e && e.message) || 'error');
     } finally {
       genAiBtn.disabled = false;
+      genAiBtn.innerHTML = genLabel;
     }
   });
 

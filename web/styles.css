@@ -349,6 +349,10 @@ body.present-body{background:var(--bg);overflow:hidden;}
 .ai-rec .input{height:34px;max-width:220px;}
 .ai-status{font-size:0.8125rem;color:var(--text-2);margin-top:10px;min-height:1.1em;}
 .ai-status.is-busy{color:var(--accent-700);}
+/* Spinner so a ~60s transcribe/generate never looks frozen. Reduced-motion freezes it to a static ring (still a clear busy cue). */
+.ai-status.is-busy::before{content:"";display:inline-block;width:12px;height:12px;margin-right:7px;vertical-align:-2px;
+  border:2px solid var(--accent-100);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 .ai-status.is-ok{color:var(--ok);font-weight:600;}
 .ai-status.is-err{color:var(--danger);font-weight:600;}
 .ai-minutes{width:100%;margin-top:10px;min-height:340px;

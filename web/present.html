@@ -106,18 +106,23 @@
 
   /* ---------- Collect selectable groups (each team's pre-note + files) ---------- */
   const groups = [];
+  let loadErr = false;
   if (meeting) {
-    const { data: teams } = await supa.from('teams').select('*').order('name');
-    const { data: subs } = await supa.from('submissions').select('*').eq('meeting_id', meeting.id);
-    const { data: notes } = await supa.from('notes').select('team_id, pre_note').eq('meeting_id', meeting.id);
-    const preOf = (id) => (notes.find(n => n.team_id === id) || {}).pre_note || '';
-    let idx = 0;
-    for (const t of (teams || [])) {
-      const color = PALETTE[idx % PALETTE.length]; idx++;
-      const files = subs.filter(s => s.team_id === t.id);
-      const pre = preOf(t.id);
-      if (!files.length && !pre.trim()) continue;
-      groups.push({ team: t, color: color, pre: pre, files: files });
+    const { data: teams, error: e1 } = await supa.from('teams').select('*').order('name');
+    const { data: subs, error: e2 } = await supa.from('submissions').select('*').eq('meeting_id', meeting.id);
+    const { data: notes, error: e3 } = await supa.from('notes').select('team_id, pre_note').eq('meeting_id', meeting.id);
+    if (e1 || e2 || e3) {
+      loadErr = true;                                  // don't render "nothing to present" on a fetch failure
+    } else {
+      const preOf = (id) => ((notes || []).find(n => n.team_id === id) || {}).pre_note || '';
+      let idx = 0;
+      for (const t of (teams || [])) {
+        const color = PALETTE[idx % PALETTE.length]; idx++;
+        const files = (subs || []).filter(s => s.team_id === t.id);
+        const pre = preOf(t.id);
+        if (!files.length && !pre.trim()) continue;
+        groups.push({ team: t, color: color, pre: pre, files: files });
+      }
     }
   }
 
@@ -129,7 +134,9 @@
       '<label for="pf-' + key + '">' + label + '</label></div>';
   }
   function renderPreflight(){
-    if (!meeting){ pf.innerHTML = '<div class="pf-card"><div class="pf-title">No active meeting</div></div>'; return; }
+    var back = '<div class="pf-actions"><span></span><a href="admin.html" class="pf-start" style="text-decoration:none;">← Back to Admin</a></div>';
+    if (!meeting){ pf.innerHTML = '<div class="pf-card"><div class="pf-title">No active meeting</div><div class="pf-sub">Open a meeting from the Admin console to present it.</div>' + back + '</div>'; return; }
+    if (loadErr){ pf.innerHTML = '<div class="pf-card"><div class="pf-title">Couldn’t load this meeting</div><div class="pf-sub">Check your connection and reload the page.</div>' + back + '</div>'; return; }
     if (!groups.length){
       pf.innerHTML = '<div class="pf-card"><div class="pf-title">Nothing to present yet</div>' +
         '<div class="pf-sub">No team has submitted notes or files for this meeting.</div>' +

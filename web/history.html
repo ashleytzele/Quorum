@@ -146,7 +146,7 @@
   const minutesEl = document.getElementById('history-minutes');
   const labelEl   = document.getElementById('detail-meeting-label');
 
-  const { data: meetings } = await supa.from('meetings').select('*')
+  const { data: meetings, error: meetingsErr } = await supa.from('meetings').select('*')
     .eq('is_active', false).order('created_at', { ascending: false });
   const { data: teams } = await supa.from('teams').select('*').order('name');
   // Admin: all teams' notes/files (RLS admin-read). Member: own team only.
@@ -158,6 +158,12 @@
   const subsOfMeeting = (mid) => (allSubs || []).filter(s => s.meeting_id === mid);
   const teamName = (id) => ((teams || []).find(t => t.id === id) || {}).name || 'Team';
 
+  if (meetingsErr) {
+    listEl.innerHTML = '<li class="muted-note" style="padding:12px;">Couldn’t load history — <a href="history.html" style="color:oklch(41% 0.165 267);font-weight:600;">retry</a>.</li>';
+    labelEl.textContent = '—';
+    notesEl.innerHTML = filesEl.innerHTML = minutesEl.innerHTML = '<div class="muted-note">Couldn’t load — retry.</div>';
+    return;
+  }
   if (!meetings || !meetings.length) {
     listEl.innerHTML = '<li class="muted-note" style="padding:12px;">No past meetings yet.</li>';
     labelEl.textContent = '—';
