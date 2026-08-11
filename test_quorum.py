@@ -132,7 +132,8 @@ def test_fetch_link_text_rejects_non_public():
     from quorum import fetch_link_text
     for bad in ["http://localhost/x", "http://127.0.0.1/", "http://192.168.1.10/",
                 "http://169.254.169.254/latest/meta-data/", "http://10.0.0.1/",
-                "ftp://example.com/x", "file:///etc/passwd", "https://[::1]/"]:
+                "http://100.64.0.1/", "ftp://example.com/x", "file:///etc/passwd",
+                "https://[::1]/"]:
         assert fetch_link_text(bad) is None, bad
 
 

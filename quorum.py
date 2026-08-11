@@ -44,8 +44,11 @@ def _combine_inputs(pre_notes, file_texts, links, during_notes=()) -> str:
 
 
 def _host_is_public(host: str) -> bool:
-    """True only if EVERY resolved address is a routable public IP. Blocks SSRF to
-    localhost / private / link-local (incl. cloud metadata 169.254.169.254) / reserved."""
+    """True only if EVERY resolved address is a routable public IP. `not is_global` blocks
+    localhost / private / link-local (incl. metadata 169.254.169.254) / CGNAT 100.64/10
+    (Tailscale) / multicast / unspecified; `is_reserved` additionally blocks NAT64-wrapped
+    reserved space that still reports is_global. (IPv4-mapped IPv6 like ::ffff:169.254.169.254
+    is classified correctly only on Python ≥3.13 — this venv is 3.14.)"""
     try:
         infos = socket.getaddrinfo(host, None)
     except OSError:
@@ -57,8 +60,7 @@ def _host_is_public(host: str) -> bool:
             ip = ipaddress.ip_address(sockaddr[0])
         except ValueError:
             return False
-        if (ip.is_private or ip.is_loopback or ip.is_link_local
-                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+        if ip.is_reserved or not ip.is_global:
             return False
     return True
 
@@ -87,10 +89,14 @@ def fetch_link_text(url: str):
         return None
     current = url
     for _hop in range(5):
-        p = urlparse(current)
-        if p.scheme not in ("http", "https") or not p.hostname:
+        try:
+            p = urlparse(current)
+            host = p.hostname                      # can raise ValueError on a malformed IPv6 authority
+        except ValueError:
             return None
-        if not _host_is_public(p.hostname):
+        if p.scheme not in ("http", "https") or not host:
+            return None
+        if not _host_is_public(host):
             return None
         try:
             r = requests.get(current, timeout=_LINK_TIMEOUT, stream=True,
@@ -114,18 +120,20 @@ def fetch_link_text(url: str):
             r.close()
         if not body or len(body) > _LINK_MAX_BYTES:
             return None
-        fd, tmp = tempfile.mkstemp(suffix=_ext_for(r.headers.get("content-type", ""), current))
+        tmp = None
         try:
+            fd, tmp = tempfile.mkstemp(suffix=_ext_for(r.headers.get("content-type", ""), current))
             with os.fdopen(fd, "wb") as fh:
                 fh.write(body)
             text = (MarkItDown().convert(tmp).text_content or "").strip()
-        except Exception:
+        except Exception:              # incl. mkstemp OSError — degrade to the bare URL, never escape
             return None
         finally:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
+            if tmp:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
         if not text:
             return None
         return text[:_LINK_CAP].rstrip() + "\n…[truncated]" if len(text) > _LINK_CAP else text
