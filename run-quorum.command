@@ -17,9 +17,12 @@ BRIDGE_PORT=8899
 pause(){ read -r -p "Press Return to close this window. " _; }
 up(){ curl -sf -o /dev/null "http://localhost:$1/$2"; }   # up <port> <path>
 
-if [ ! -d "$WEB_DIR" ]; then
-  echo "Can't find the Quorum web folder: $WEB_DIR"
-  echo "Set QUORUM_WEB_DIR to your Quorum repo's web/ folder, then try again."
+# The pages live in the repo's web/web/ — accept either the repo or the page folder.
+[ -f "$WEB_DIR/index.html" ] || [ ! -f "$WEB_DIR/web/index.html" ] || WEB_DIR="$WEB_DIR/web"
+
+if [ ! -f "$WEB_DIR/index.html" ]; then
+  echo "Can't find the Quorum web pages: $WEB_DIR/index.html"
+  echo "Set QUORUM_WEB_DIR to the folder holding index.html, then try again."
   pause; exit 1
 fi
 
@@ -38,14 +41,14 @@ if up "$WEB_PORT" "index.html"; then
   WEB_STATE="already running (reused)"
 else
   python3 - "$WEB_PORT" "$WEB_DIR" <<'PY' >/dev/null 2>&1 &
-import sys, http.server, socketserver
+import sys, http.server
 port, root = int(sys.argv[1]), sys.argv[2]
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k): super().__init__(*a, directory=root, **k)
     def end_headers(self):
         self.send_header("Cache-Control", "no-store, max-age=0"); super().end_headers()
-socketserver.TCPServer.allow_reuse_address = True
-socketserver.TCPServer(("", port), H).serve_forever()
+http.server.ThreadingHTTPServer.allow_reuse_address = True   # serial server stalls on browser keep-alive
+http.server.ThreadingHTTPServer(("", port), H).serve_forever()
 PY
   WEB_PID=$!; WEB_STATE="started"
 fi
@@ -67,6 +70,8 @@ trap 'exit 0' INT TERM
 
 # Wait for the web server to answer, then open the browser.
 for _ in $(seq 1 25); do up "$WEB_PORT" "index.html" && break; sleep 0.3; done
+# Flask needs ~1s to bind; a single check here always loses the race.
+for _ in $(seq 1 25); do up "$BRIDGE_PORT" "health" && break; sleep 0.3; done
 if up "$BRIDGE_PORT" "health"; then BRIDGE_STATE="ready"; else BRIDGE_STATE="offline — AI generation off"; fi
 
 open "http://localhost:$WEB_PORT/admin.html"
