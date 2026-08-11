@@ -1,5 +1,5 @@
 ---
-name: MeeTeam
+name: Quorum
 description: Composed, precise meeting software where the tool disappears into the task — one indigo accent, warm-gray OKLCH neutrals, two co-equal themes.
 colors:
   indigo: "oklch(51% 0.20 267)"
@@ -99,13 +99,13 @@ components:
     padding: "3px 9px"
 ---
 
-# Design System: MeeTeam
+# Design System: Quorum
 
 ## 1. Overview
 
 **Creative North Star: "The Well-Run Meeting"**
 
-MeeTeam should feel the way a well-run meeting feels — calm, organized, never shouty. The interface is an instrument the fluent user trusts on sight and then stops noticing: chrome recedes, the task the user is acting on carries all the visual weight, and nothing asks for attention it hasn't earned. This is Linear/Stripe-grade *earned familiarity* — standard affordances executed impeccably — not novelty for its own sake. A person mid-meeting, sometimes projecting to a room, should never have to fight the tool to find where they'd expect something to be.
+Quorum should feel the way a well-run meeting feels — calm, organized, never shouty. The interface is an instrument the fluent user trusts on sight and then stops noticing: chrome recedes, the task the user is acting on carries all the visual weight, and nothing asks for attention it hasn't earned. This is Linear/Stripe-grade *earned familiarity* — standard affordances executed impeccably — not novelty for its own sake. A person mid-meeting, sometimes projecting to a room, should never have to fight the tool to find where they'd expect something to be.
 
 The system is built on a single restrained indigo accent over warm-gray neutrals, expressed entirely in an OKLCH token set that produces **two co-equal themes** — light and dark are first-class outputs of the same tokens, not a skin and its inversion. The neutral is deliberately *warm-gray at near-zero chroma* (hue 74) so it reads as considered gray, never as the cream-and-terracotta look that has become the default of AI-generated interfaces. Indigo appears only where meaning lives: the primary action, the current selection, and state. Everything else is quiet.
 

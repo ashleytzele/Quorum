@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-07-09T00:00:00Z",
-  "title": "Design System: MeeTeam",
+  "title": "Design System: Quorum",
   "extensions": {
     "colorMeta": {
       "indigo": { "role": "primary", "displayName": "Signal Indigo", "canonical": "oklch(51% 0.20 267)", "tonalRamp": ["oklch(20% 0.09 267)", "oklch(28% 0.13 267)", "oklch(41% 0.165 267)", "oklch(51% 0.20 267)", "oklch(60% 0.19 267)", "oklch(72% 0.15 267)", "oklch(85% 0.08 267)", "oklch(96% 0.02 267)"] },
@@ -94,7 +94,7 @@
   ],
   "narrative": {
     "northStar": "The Well-Run Meeting",
-    "overview": "MeeTeam should feel the way a well-run meeting feels — calm, organized, never shouty. The interface is an instrument the fluent user trusts on sight and then stops noticing: chrome recedes, the task carries all the visual weight, and nothing asks for attention it hasn't earned. This is Linear/Stripe-grade earned familiarity, not novelty. The system is a single restrained indigo accent over warm-gray OKLCH neutrals, producing two co-equal themes — light and dark from one token set. Indigo appears only where meaning lives: the primary action, the current selection, and state. Everything else is quiet.",
+    "overview": "Quorum should feel the way a well-run meeting feels — calm, organized, never shouty. The interface is an instrument the fluent user trusts on sight and then stops noticing: chrome recedes, the task carries all the visual weight, and nothing asks for attention it hasn't earned. This is Linear/Stripe-grade earned familiarity, not novelty. The system is a single restrained indigo accent over warm-gray OKLCH neutrals, producing two co-equal themes — light and dark from one token set. Indigo appears only where meaning lives: the primary action, the current selection, and state. Everything else is quiet.",
     "keyCharacteristics": [
       "One accent (indigo), used for action, selection, and state — never decoration.",
       "Warm-gray OKLCH neutrals; two themes from one token set.",

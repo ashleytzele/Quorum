@@ -1,7 +1,7 @@
-# MeeTeam — Design Improvement Brief
+# Quorum — Design Improvement Brief
 
 ## What this app is
-MeeTeam is a lightweight web app for running recurring team meetings.
+Quorum is a lightweight web app for running recurring team meetings.
 - **Admins** configure a meeting, review each team's submissions, then **present** and **export minutes**.
 - **Team members** submit pre-meeting notes + files and capture meeting notes.
 - Two meeting **modes**: **Team** (each team self-submits) and **VIP** (the admin authors everything solo, no teams).

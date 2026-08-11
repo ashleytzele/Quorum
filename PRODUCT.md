@@ -11,7 +11,7 @@ Two roles inside a company that runs recurring team meetings:
 Both are at a desk on a laptop, in focused work, sometimes projecting to a room (Present mode). Not a consumer audience; not mobile-first, but must not break on smaller screens.
 
 ## Product Purpose
-MeeTeam turns scattered pre-meeting prep and note-taking into one shared, structured flow. Teams submit ahead of time; the admin reviews, presents a clean deck, and exports minutes — with a full History archive. Two operating modes: **Team** (each team self-submits) and **VIP** (the admin authors everything solo for high-stakes meetings). Success = the tool disappears into running the meeting: nothing to fight, everything where you'd expect it.
+Quorum turns scattered pre-meeting prep and note-taking into one shared, structured flow. Teams submit ahead of time; the admin reviews, presents a clean deck, and exports minutes — with a full History archive. Two operating modes: **Team** (each team self-submits) and **VIP** (the admin authors everything solo for high-stakes meetings). Success = the tool disappears into running the meeting: nothing to fight, everything where you'd expect it.
 
 ## Brand Personality
 Composed, precise, quietly premium. Three words: **trustworthy, efficient, considered.** It should feel like a well-run meeting — calm, organized, never shouty. The voice is plain and active ("Add team", "Start presentation", "Submitted"), never clever or salesy.

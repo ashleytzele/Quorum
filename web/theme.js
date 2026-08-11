@@ -1,7 +1,7 @@
 // No-flash light/dark theme. Loaded synchronously in <head> so data-theme is set
 // before first paint. Injects a floating toggle (except in the embedded VIP workspace).
 (function () {
-  var KEY = 'meeteam.theme';
+  var KEY = 'quorum.theme';
   var saved = null;
   try { saved = localStorage.getItem(KEY); } catch (e) {}
   var theme = saved || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');

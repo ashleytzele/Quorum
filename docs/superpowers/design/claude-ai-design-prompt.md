@@ -9,7 +9,7 @@ integration is copy-paste, not rework.
 
 ## PROMPT (copy from here)
 
-Design a clean, professional web app called **"MeeTeam"** for a company to
+Design a clean, professional web app called **"Quorum"** for a company to
 run recurring team meetings. Plain **HTML and CSS only** — no React, no frameworks,
 no build tools. Each screen is a separate self-contained HTML page. Use placeholder
 / dummy data to show the look (no real backend — it's a visual prototype).
@@ -70,7 +70,7 @@ ids above.
 
 ## UPDATE PROMPT (v2) — paste into the SAME claude.ai/design chat
 
-Building on the current MeeTeam design — **keep the same look, layout language, colors,
+Building on the current Quorum design — **keep the same look, layout language, colors,
 and single shared stylesheet** — make these changes and add one new page. Still HTML/CSS
 only, dummy data, no backend.
 

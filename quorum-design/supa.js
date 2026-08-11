@@ -32,7 +32,7 @@ async function openMeetings() {
   return data || [];
 }
 
-const MEETING_KEY = 'meeteam.meeting';
+const MEETING_KEY = 'quorum.meeting';
 // The meeting the user is currently working on. Remembered per-browser so it
 // survives page navigation; falls back to the soonest open meeting.
 async function selectedMeeting(list) {
