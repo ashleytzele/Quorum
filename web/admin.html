@@ -320,6 +320,12 @@
     document.getElementById('org-name').textContent = (m && m.org) || 'Admin console';
     flashSaved();
     if (typeof closeDrawer === 'function') closeDrawer();
+    await renderMeetingSections(m);
+  }
+  // Per-meeting sections (workspace/teams/readiness/record card) WITHOUT touching the details-form
+  // inputs — safe to call right after the form autosave creates the first meeting (no reload needed).
+  async function renderMeetingSections(m){
+    isVip = !!(m && m.model === 'admin');
     if (isVip){
       teamsCard.style.display = 'none'; vipWs.style.display = '';
       document.getElementById('vip-frame').src = 'team.html?embed=1&meeting=' + mId + '&team=' + me.team_id;
@@ -381,7 +387,7 @@
     flashSaving();
     const payload = { title: fTitle.value || 'Untitled', meeting_date: fDate.value || null, org: fOrg.value, model: fModel.value, template: fTemplate.value || null };
     if (mId){ await supa.from('meetings').update(payload).eq('id', mId); }
-    else { const { data } = await supa.from('meetings').insert(Object.assign({ is_active: true }, payload)).select().single(); mId = data.id; meeting = data; meetings.push(data); renderTabs(); }
+    else { const { data } = await supa.from('meetings').insert(Object.assign({ is_active: true }, payload)).select().single(); mId = data.id; meeting = data; meetings.push(data); renderTabs(); await renderMeetingSections(data); }
     flashSaved();
   }
   let mtimer;
