@@ -420,6 +420,23 @@ body.present-body{background:var(--bg);overflow:hidden;}
 .mt-status-processing{background:var(--accent-100);color:var(--accent-700);}
 .mt-status-draft{background:var(--accent-50);color:var(--accent-700);}
 .mt-status-published{background:var(--ok-50);color:var(--ok);}
+
+/* ---- Admin console: sidebar (meeting list) + workspace ---- */
+.console-layout{display:grid;grid-template-columns:290px 1fr;gap:24px;align-items:start;}
+.console-side{display:flex;flex-direction:column;}
+.console-main{min-width:0;}
+.mlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.mitem{padding:11px 13px;border:1px solid var(--border);border-radius:11px;cursor:pointer;background:var(--surface);
+  display:flex;flex-direction:column;gap:3px;transition:border-color .15s,background .15s,box-shadow .15s;}
+.mitem:hover{border-color:var(--border-strong);background:var(--surface-2);}
+.mitem.active{border-color:var(--accent);background:var(--accent-50);box-shadow:0 0 0 3px var(--accent-100);}
+.mitem:focus-visible{outline:none;box-shadow:0 0 0 4px var(--accent-100);}
+.mitem-title{font-weight:700;font-size:0.9063rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mitem-meta{font-size:0.7188rem;color:var(--text-3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+@media (max-width:900px){
+  .console-layout{grid-template-columns:1fr;}
+  .mlist{max-height:38vh;overflow:auto;}
+}
 .pf-banner{background:var(--accent-50);color:var(--accent-700);border:1px solid var(--accent-100);border-radius:var(--radius-sm);padding:10px 14px;font-size:0.8438rem;margin-bottom:22px;}
 .pf-banner.ok{background:var(--ok-50);color:var(--ok);border-color:var(--ok-50);}   /* success-toned (e.g. "Recording saved ✓") */
 .pf-banner a{margin-left:8px;font-weight:600;}

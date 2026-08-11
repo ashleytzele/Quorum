@@ -37,13 +37,17 @@
 
   <main class="main" id="main">
     <div class="container">
-      <div class="grid-head">
-        <div>
-          <h1 class="page-title">Meeting administration</h1>
-          <div class="page-sub">Configure the meeting, review each team's submission, then present or export.</div>
-        </div>
-      </div>
+      <div class="console-layout">
+        <aside class="console-side">
+          <button class="btn btn-primary btn-block" id="new-meeting-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            New meeting
+          </button>
+          <input class="input" id="meeting-search" type="search" placeholder="Search meetings…" aria-label="Search meetings" style="margin:12px 0;">
+          <ul class="mlist" id="meeting-list"></ul>
+        </aside>
 
+        <div class="console-main">
       <!-- Meeting details -->
       <section class="card" style="margin-bottom:22px;">
         <div class="card-head">
@@ -57,14 +61,9 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18M6 8v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8M4.5 8 6 4.5A1.5 1.5 0 0 1 7.4 3.5h9.2A1.5 1.5 0 0 1 18 4.5L19.5 8M10 12h4"/></svg>
               Archive
             </button>
-            <button class="btn btn-ghost" id="new-meeting-btn" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-              New meeting
-            </button>
           </span>
         </div>
         <div class="card-body">
-          <div class="meeting-tabs" id="meeting-tabs"></div>
           <form id="meeting-form" class="form-row">
             <div class="field">
               <label class="label" for="m-title">Meeting title</label>
@@ -182,6 +181,8 @@
           Present
         </button>
       </div>
+        </div><!-- /.console-main -->
+      </div><!-- /.console-layout -->
     </div>
   </main>
 </div>
@@ -252,7 +253,7 @@
   /* ---------- Meetings: tabs + per-meeting context. Switching happens IN PLACE — no reload. ---------- */
   const meetings = await openMeetings();
   let meeting = await selectedMeeting(meetings);
-  const tabsEl = document.getElementById('meeting-tabs');
+  const tabsEl = document.getElementById('meeting-list');
   const archiveBtn = document.getElementById('archive-meeting-btn');
   const fTitle = document.getElementById('m-title');
   const fDate  = document.getElementById('m-date');
@@ -288,22 +289,25 @@
 
   function renderTabs(){
     archiveBtn.disabled = !meetings.length;
-    if (!meetings.length){ tabsEl.innerHTML = '<div class="muted-note">No open meetings — fill in the details below to create one.</div>'; return; }
-    tabsEl.innerHTML = meetings.map(function(m){
-      const done = totalTeams > 0 && subCount(m.id) >= totalTeams;
+    if (!meetings.length){ tabsEl.innerHTML = '<li class="muted-note" style="padding:12px;">No meetings yet — click “New meeting”.</li>'; return; }
+    const q = (document.getElementById('meeting-search').value || '').trim().toLowerCase();
+    const list = q ? meetings.filter(function(m){ return (m.title || '').toLowerCase().includes(q); }) : meetings;
+    if (!list.length){ tabsEl.innerHTML = '<li class="muted-note" style="padding:12px;">No meetings match.</li>'; return; }
+    tabsEl.innerHTML = list.map(function(m){
       const active = meeting && m.id === meeting.id ? ' active' : '';
       const modeName = m.model === 'admin' ? 'Admin' : 'Team';
-      const modelBadge = ' <span class="mt-flag mt-flag-' + m.model + '">' + modeName + '</span>';
       const st = meetingStatus(m);
-      const statusBadge = ' <span class="mt-flag mt-status-' + st.cls + '">' + st.label + '</span>';
-      const label = (m.title ? esc(m.title) + ' · ' : '') + subCount(m.id) + '/' + totalTeams + ' in';
-      return '<button type="button" class="meeting-tab' + active + '" data-id="' + m.id + '" title="' + esc(m.title || '') + '">' +
-        '<span class="mt-dot' + (done ? ' submitted' : '') + '"></span>' +
-        '<span class="mt-body"><span class="mt-date">' + esc(fmtTab(m.meeting_date)) + '</span>' +
-        '<span class="mt-sub">' + label + modelBadge + statusBadge + '</span></span></button>';
+      const inCount = totalTeams ? (' · ' + subCount(m.id) + '/' + totalTeams + ' in') : '';
+      return '<li class="mitem' + active + '" data-id="' + m.id + '" role="button" tabindex="0" title="' + esc(m.title || '') + '">' +
+        '<span class="mitem-title">' + (esc(m.title) || 'Untitled') + '</span>' +
+        '<span class="mitem-meta">' + esc(fmtTab(m.meeting_date)) +
+          ' <span class="mt-flag mt-status-' + st.cls + '">' + st.label + '</span>' +
+          ' <span class="mt-flag mt-flag-' + m.model + '">' + modeName + '</span>' + inCount +
+        '</span></li>';
     }).join('');
-    Array.prototype.forEach.call(tabsEl.querySelectorAll('.meeting-tab'), function(btn){
-      btn.addEventListener('click', function(){ switchMeeting(btn.dataset.id); });
+    Array.prototype.forEach.call(tabsEl.querySelectorAll('.mitem'), function(el){
+      el.addEventListener('click', function(){ switchMeeting(el.dataset.id); });
+      el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); switchMeeting(el.dataset.id); } });
     });
   }
 
@@ -332,7 +336,7 @@
     } else {
       vipWs.style.display = 'none'; teamsCard.style.display = '';
     }
-    Array.prototype.forEach.call(tabsEl.querySelectorAll('.meeting-tab'), function(b){ b.classList.toggle('active', !!m && b.dataset.id === m.id); });
+    Array.prototype.forEach.call(tabsEl.querySelectorAll('.mitem'), function(b){ b.classList.toggle('active', !!m && b.dataset.id === m.id); });
     subs = []; notes = [];
     if (mId){
       subs = (await supa.from('submissions').select('*').eq('meeting_id', mId)).data || [];
@@ -397,12 +401,16 @@
   // New meeting: add another open meeting; select it in place.
   document.getElementById('new-meeting-btn').addEventListener('click', async function(){
     const today = new Date().toISOString().slice(0, 10);
-    const { data } = await supa.from('meetings').insert({ title: 'New meeting', meeting_date: today, org: fOrg.value, is_active: true }).select().single();
+    // Blank meeting (title carried by nothing, org carried from the last one), selected + ready to fill.
+    const { data } = await supa.from('meetings').insert({ title: '', meeting_date: today, org: fOrg.value, is_active: true }).select().single();
     if (!data) return;
-    meetings.push(data); renderTabs();
+    meetings.push(data); document.getElementById('meeting-search').value = ''; renderTabs();
     setSelectedMeeting(data.id);
     await showMeeting(data);
+    fTitle.focus();                     // drop the cursor in the empty title, ready to type
   });
+  // Filter the sidebar meeting list as you type.
+  document.getElementById('meeting-search').addEventListener('input', renderTabs);
 
   // Archive: move the selected meeting to History (is_active=false); re-render in place.
   archiveBtn.addEventListener('click', async function(){
