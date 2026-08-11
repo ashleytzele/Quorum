@@ -5,12 +5,13 @@
 # Already-running servers are reused (not fought over). Close this window
 # (or Ctrl-C) to stop whatever THIS launcher started.
 #
-# ponytail: the web folder defaults to the usual location; override if you moved it:
-#   QUORUM_WEB_DIR=/path/to/Quorum/web ./run-quorum.command
+# ponytail: the web app is expected to sit NEXT TO this engine folder (…/web beside …/engine).
+# Override if it's elsewhere:  QUORUM_WEB_DIR=/path/to/web ./run-quorum.command
 set -u
 cd "$(dirname "$0")" || exit 1
+SELF_DIR="$(pwd)"
 
-WEB_DIR="${QUORUM_WEB_DIR:-$HOME/Desktop/Github/MeeTeam/web}"
+WEB_DIR="${QUORUM_WEB_DIR:-$(cd "$SELF_DIR/../web" 2>/dev/null && pwd)}"
 WEB_PORT="${QUORUM_WEB_PORT:-8000}"
 BRIDGE_PORT=8899
 pause(){ read -r -p "Press Return to close this window. " _; }
