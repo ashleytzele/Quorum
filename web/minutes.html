@@ -157,8 +157,9 @@
   }
   async function loadStoredRecordings() {
     try {
-      const { data } = await supa.storage.from('submissions')
+      const { data, error } = await supa.storage.from('submissions')
         .list('recordings/' + meeting.id, { sortBy: { column: 'name', order: 'desc' } });
+      if (error) { storedSel.innerHTML = '<option value="">Couldn’t load recordings — retry</option>'; return; }
       const recs = (data || []).filter(f => f.name && !f.name.startsWith('.'));
       storedSel.innerHTML = recs.length
         ? recs.map(f => '<option value="recordings/' + meeting.id + '/' + esc(f.name) + '">' + recLabel(f.name) + '</option>').join('')
@@ -212,7 +213,8 @@
           const path = storedSel.value;
           if (!path) throw { error: 'No recording yet — record the meeting on the Admin page.' };
           const url = await signedUrl(path);
-          blob = await fetch(url).then(r => r.blob());
+          if (url === '#') throw { error: 'Couldn’t load the recording — please try again.' };
+          blob = await fetch(url).then(r => { if (!r.ok) throw { error: 'Recording could not be fetched — it may have been removed.' }; return r.blob(); });
           name = path.split('/').pop();
         }
         const fd = new FormData();

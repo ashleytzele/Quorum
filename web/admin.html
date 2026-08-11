@@ -346,7 +346,7 @@
       document.getElementById('rec-gen-link').href = 'minutes.html?meeting=' + m.id;
       recSaved.style.display = 'none';   // reset the saved banner when switching meetings
       recordCard.style.display = '';
-      if (!recMicsLoaded) { recMicsLoaded = true; listRecMics(); }
+      if (!recMicsLoaded) listRecMics();
     } else {
       recordCard.style.display = 'none';
     }
@@ -425,11 +425,14 @@
       const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
       s.getTracks().forEach(t => t.stop());                                   // stop the probe stream
       recDevice.innerHTML = devs.map(d =>
-        '<option value="' + d.deviceId + '">' + (d.label ? d.label.replace(/</g, '&lt;') : 'Microphone') + '</option>').join('');
-    } catch (e) { recStatus.textContent = 'Mic access denied.'; }
+        '<option value="' + esc(d.deviceId) + '">' + esc(d.label || 'Microphone') + '</option>').join('');
+      recMicsLoaded = true;                    // latch only on success, so a denied prompt can be retried
+    } catch (e) { recStatus.textContent = 'Mic access denied — allow the mic in the browser, then click Record.'; }
   }
   if (recBtn) recBtn.addEventListener('click', async function(){
     if (recMediaRec && recMediaRec.state === 'recording') { recMediaRec.stop(); return; }
+    const targetId = recMeetingId;             // snapshot: the meeting being recorded, even if the user switches tabs
+    if (!targetId) { recStatus.textContent = 'Select a meeting first.'; return; }
     try {
       const deviceId = recDevice.value;
       recStream = await navigator.mediaDevices.getUserMedia({ audio: deviceId ? { deviceId } : true });
@@ -440,19 +443,22 @@
         const blob = new Blob(chunks, { type: recMediaRec.mimeType });
         recStream.getTracks().forEach(t => t.stop());
         recBtn.innerHTML = REC_ICON + ' Record';
-        if (!recMeetingId) { recStatus.textContent = 'No meeting selected.'; return; }
         recStatus.textContent = 'uploading…';
-        const path = 'recordings/' + recMeetingId + '/' + Date.now() + '.' + recordingExt(blob.type);
-        const up = await supa.storage.from('submissions').upload(path, blob, { contentType: blob.type });
-        if (up.error) { recStatus.textContent = ''; console.error(up.error); toast('Couldn’t save the recording — please try again.', 'error'); return; }
-        recStatus.textContent = '';
-        recSaved.style.display = '';
-        // Auto-advance the status pill to "Recorded" (only forward, from an earlier stage).
-        if (meeting && meeting.id === recMeetingId && (!meeting.status || meeting.status === 'setup' || meeting.status === 'collecting')) {
-          await supa.from('meetings').update({ status: 'ready' }).eq('id', recMeetingId);
-          meeting.status = 'ready';
-          renderTabs();
-        }
+        try {
+          const path = 'recordings/' + targetId + '/' + Date.now() + '.' + recordingExt(blob.type);
+          const up = await supa.storage.from('submissions').upload(path, blob, { contentType: blob.type });
+          if (up.error) { recStatus.textContent = ''; console.error(up.error); toast('Couldn’t save the recording — please try again.', 'error'); return; }
+          recStatus.textContent = '';
+          // Audio saved under the recorded meeting; advance status / show banner only if still on it.
+          if (meeting && meeting.id === targetId) {
+            recSaved.style.display = '';
+            if (!meeting.status || meeting.status === 'setup' || meeting.status === 'collecting') {
+              await supa.from('meetings').update({ status: 'ready' }).eq('id', targetId);
+              meeting.status = 'ready';
+              renderTabs();
+            }
+          }
+        } catch (e) { recStatus.textContent = ''; console.error(e); toast('Couldn’t save the recording — please try again.', 'error'); }
       };
       recMediaRec.start(); recSaved.style.display = 'none';
       recBtn.innerHTML = STOP_ICON + ' Stop'; recStatus.textContent = 'recording…';
