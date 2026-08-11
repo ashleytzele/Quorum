@@ -86,6 +86,7 @@
         </label>
         <div class="ai-status" id="ai-status" role="status" aria-live="polite"></div>
         <textarea class="textarea ai-minutes" id="ai-minutes" rows="16" placeholder="Generated minutes appear here — review and edit before finalizing." style="display:none;"></textarea>
+        <p id="ai-minutes-note" class="page-sub" style="display:none;margin-top:6px;">Edit above if needed — this text is what <b>Finalize &amp; archive</b> publishes.</p>
       </div>
     </div>
   </div>
@@ -214,6 +215,7 @@
     const src = currentSource();
     const genLabel = genAiBtn.innerHTML;
     genAiBtn.disabled = true; genAiBtn.textContent = 'Generating…'; aiText.style.display = '';
+    document.getElementById('ai-minutes-note').style.display = '';
     aiStatus.className = 'ai-status is-busy';
     aiStatus.textContent = src === 'meetily' ? 'Generating…' : 'Transcribing + generating… (this can take a minute)';
     try {

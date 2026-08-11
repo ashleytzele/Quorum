@@ -173,7 +173,14 @@
 
   async function select(idx){
     const m = meetings[idx];
-    Array.prototype.forEach.call(listEl.children, (li, k) => li.classList.toggle('active', k === idx));
+    Array.prototype.forEach.call(listEl.children, (li, k) => {
+      const on = k === idx; li.classList.toggle('active', on);
+      if (on) li.setAttribute('aria-current', 'true'); else li.removeAttribute('aria-current');
+    });
+    // On the stacked mobile layout the detail is below the fold — bring it into view.
+    if (window.matchMedia('(max-width:860px)').matches) {
+      const d = document.getElementById('history-detail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     labelEl.textContent = m.title + (m.meeting_date ? ' · ' + m.meeting_date : '');
     const mNotes = (allNotes || []).filter(n => n.meeting_id === m.id);
     const mSubs = subsOfMeeting(m.id);

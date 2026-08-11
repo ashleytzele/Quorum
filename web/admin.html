@@ -157,11 +157,11 @@
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <label class="label" for="rec-device" style="margin:0;">Mic</label>
             <select class="input" id="rec-device" style="width:auto;min-width:180px;"></select>
-            <button class="btn btn-ghost" id="rec-btn" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg> Record</button>
+            <button class="btn btn-ghost" id="rec-btn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg> Record</button>
             <span id="rec-timer" class="page-sub" aria-hidden="true" style="font-variant-numeric:tabular-nums;"></span>
             <span id="rec-status" class="page-sub" aria-live="polite"></span>
           </div>
-          <div id="rec-saved" class="pf-banner" style="display:none;margin:14px 0 0;">Recording saved ✓ · <a id="rec-gen-link" href="minutes.html">Generate minutes →</a></div>
+          <div id="rec-saved" class="pf-banner ok" style="display:none;margin:14px 0 0;">Recording saved ✓ · <a id="rec-gen-link" href="minutes.html">Generate minutes →</a></div>
           <details style="margin-top:16px;">
             <summary class="page-sub" style="cursor:pointer;user-select:none;">Command line (advanced)</summary>
             <p class="page-sub" style="margin:10px 0 6px;">Prefer to record on your Mac? Run this — the meeting id is filled in:</p>
@@ -433,6 +433,7 @@
     recStatus.textContent = 'Recording not supported here — use the command line below.';
   }
   async function listRecMics(){
+    recDevice.innerHTML = '<option>Requesting mic…</option>';   // placeholder while the permission prompt is pending
     try {
       const s = await navigator.mediaDevices.getUserMedia({ audio: true });   // prompt once so labels appear
       const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
@@ -456,7 +457,7 @@
         stopRecTimer();
         const blob = new Blob(chunks, { type: recMediaRec.mimeType });
         recStream.getTracks().forEach(t => t.stop());
-        recBtn.innerHTML = REC_ICON + ' Record';
+        recBtn.innerHTML = REC_ICON + ' Record'; recBtn.setAttribute('aria-pressed', 'false');
         recStatus.textContent = 'uploading…';
         try {
           const path = 'recordings/' + targetId + '/' + Date.now() + '.' + recordingExt(blob.type);
@@ -475,7 +476,7 @@
         } catch (e) { recStatus.textContent = ''; console.error(e); toast('Couldn’t save the recording — please try again.', 'error'); }
       };
       recMediaRec.start(); recSaved.style.display = 'none';
-      recBtn.innerHTML = STOP_ICON + ' Stop'; recStatus.textContent = 'Recording…'; startRecTimer();
+      recBtn.innerHTML = STOP_ICON + ' Stop'; recBtn.setAttribute('aria-pressed', 'true'); recStatus.textContent = 'Recording…'; startRecTimer();
     } catch (e) { recStatus.textContent = 'Could not start recording.'; }
   });
 

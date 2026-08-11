@@ -141,7 +141,7 @@ img{max-width:100%;display:block;}
 /* ---- Card ---- */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);}
 .card-pad{padding:22px;}
-.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 22px;border-bottom:1px solid var(--border);}
+.card-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:17px 22px;border-bottom:1px solid var(--border);}
 .card-title{font-size:0.9688rem;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;white-space:nowrap;}
 .card-title svg{width:18px;height:18px;color:var(--text-3);}
 .card-body{padding:22px;}
@@ -421,6 +421,7 @@ body.present-body{background:var(--bg);overflow:hidden;}
 .mt-status-draft{background:var(--accent-50);color:var(--accent-700);}
 .mt-status-published{background:var(--ok-50);color:var(--ok);}
 .pf-banner{background:var(--accent-50);color:var(--accent-700);border:1px solid var(--accent-100);border-radius:var(--radius-sm);padding:10px 14px;font-size:0.8438rem;margin-bottom:22px;}
+.pf-banner.ok{background:var(--ok-50);color:var(--ok);border-color:var(--ok-50);}   /* success-toned (e.g. "Recording saved ✓") */
 .pf-banner a{margin-left:8px;font-weight:600;}
 /* Embedded workspace (admin-run VIP meeting inside admin.html): strip page chrome */
 .embed .topbar,.embed .grid-head,.embed #meeting-tabs{display:none;}

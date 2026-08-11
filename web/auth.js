@@ -19,8 +19,8 @@
     const val = (email.value || '').trim();
     const pw = password.value || '';
     msg.className = 'auth-msg';
-    if (!EMAIL.test(val)) { return fail('Please enter a valid email address.'); }
-    if (pw.length < 6) { return fail('Password must be at least 6 characters.'); }
+    if (!EMAIL.test(val)) { email.setAttribute('aria-invalid', 'true'); return fail('Please enter a valid email address.'); }
+    if (pw.length < 6) { password.setAttribute('aria-invalid', 'true'); return fail('Password must be at least 6 characters.'); }
     btn.disabled = true; btn.textContent = 'Signing in…';
 
     try {
@@ -60,6 +60,7 @@
 
   [email, password].forEach(function (el) {
     el.addEventListener('input', function () {
+      el.removeAttribute('aria-invalid');
       if (msg.classList.contains('err')) { msg.className = 'auth-msg'; msg.textContent = "We'll never share your email."; }
     });
   });
