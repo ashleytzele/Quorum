@@ -64,7 +64,7 @@ function meetingStatus(m) {
   const S = {
     setup:      { key: 'setup',      label: 'Setup',           cls: 'setup' },
     collecting: { key: 'collecting', label: 'Collecting',      cls: 'collecting' },
-    ready:      { key: 'ready',      label: 'Ready to record', cls: 'ready' },
+    ready:      { key: 'ready',      label: 'Recorded',        cls: 'ready' },
     processing: { key: 'processing', label: 'Processing',      cls: 'processing' },
     draft:      { key: 'draft',      label: 'Draft ready',     cls: 'draft' },
     published:  { key: 'published',  label: 'Published',       cls: 'published' },

@@ -78,7 +78,7 @@ const { meetingStatus } = require('./web/lib.js');
 test('meetingStatus maps each explicit status', () => {
   assert.equal(meetingStatus({ status: 'setup' }).label, 'Setup');
   assert.equal(meetingStatus({ status: 'collecting' }).label, 'Collecting');
-  assert.equal(meetingStatus({ status: 'ready' }).label, 'Ready to record');
+  assert.equal(meetingStatus({ status: 'ready' }).label, 'Recorded');
   assert.equal(meetingStatus({ status: 'processing' }).label, 'Processing');
   assert.equal(meetingStatus({ status: 'draft' }).label, 'Draft ready');
   assert.equal(meetingStatus({ status: 'published' }).label, 'Published');
