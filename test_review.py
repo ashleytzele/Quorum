@@ -151,6 +151,17 @@ def test_resolve_template_precedence(tmp_path):
     assert review.resolve_template(None, None, tmp_path) == str(tmp_path / "weekly_review.json")
 
 
+def test_resolve_template_explicit_stem_resolves(tmp_path):
+    import review
+    (tmp_path / "weekly_review.json").write_text("{}")
+    # -t as a bare stem resolves to the file (like the UI), not treated as a literal path
+    assert review.resolve_template("weekly_review", None, tmp_path) == str(tmp_path / "weekly_review.json")
+    # -t as a real path is still returned verbatim
+    p = tmp_path / "custom.json"
+    p.write_text("{}")
+    assert review.resolve_template(str(p), None, tmp_path) == str(p)
+
+
 def test_resolve_template_unknown_stem_exits(tmp_path):
     import review
     (tmp_path / "weekly_review.json").write_text("{}")

@@ -223,9 +223,13 @@ def _status_best_effort(meeting_id, status):
 
 
 def resolve_template(explicit, meeting_template, script_dir):
-    """explicit -t > meeting's stem (found across repo + app dirs) > DEFAULT_TEMPLATE."""
+    """explicit -t > meeting's stem (found across repo + app dirs) > DEFAULT_TEMPLATE.
+    -t accepts a path OR a bare stem (resolved across the same sources as the UI)."""
     if explicit:
-        return explicit
+        if Path(explicit).is_file():
+            return explicit                      # a real path (file exists)
+        cand = _find_template_path(explicit, script_dir)
+        return str(cand) if cand else explicit   # bare stem → resolved; else as-is (caller reports)
     if meeting_template:
         cand = _find_template_path(meeting_template, script_dir)
         if cand is None:
