@@ -154,7 +154,9 @@ img{max-width:100%;display:block;}
 .dot{width:7px;height:7px;border-radius:999px;background:var(--text-3);flex:none;}
 .status.ok{color:var(--ok);} .status.ok .dot{background:var(--ok);}
 .status.saving{color:var(--warn);} .status.saving .dot{background:var(--warn);animation:pulse 1s infinite;}
+.status.err{color:var(--danger);} .status.err .dot{background:var(--danger);}
 @keyframes pulse{50%{opacity:.3;}}
+.rec-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);animation:pulse 1s infinite;margin-right:3px;vertical-align:0;}
 
 /* =============================================================
    Login

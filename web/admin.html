@@ -158,6 +158,7 @@
             <label class="label" for="rec-device" style="margin:0;">Mic</label>
             <select class="input" id="rec-device" style="width:auto;min-width:180px;"></select>
             <button class="btn btn-ghost" id="rec-btn" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg> Record</button>
+            <span id="rec-timer" class="page-sub" aria-hidden="true" style="font-variant-numeric:tabular-nums;"></span>
             <span id="rec-status" class="page-sub" aria-live="polite"></span>
           </div>
           <div id="rec-saved" class="pf-banner" style="display:none;margin:14px 0 0;">Recording saved ✓ · <a id="rec-gen-link" href="minutes.html">Generate minutes →</a></div>
@@ -263,8 +264,9 @@
   const recBtn = document.getElementById('rec-btn');
   const recDevice = document.getElementById('rec-device');
   const recStatus = document.getElementById('rec-status');
+  const recTimer = document.getElementById('rec-timer');
   const recSaved = document.getElementById('rec-saved');
-  let recMeetingId = null, recMicsLoaded = false, recMediaRec = null, recStream = null;
+  let recMeetingId = null, recMicsLoaded = false, recMediaRec = null, recStream = null, recTick = null;
   const savedEl = document.getElementById('meeting-saved');
   const teamsCard = document.getElementById('teams-card');
   const vipWs = document.getElementById('vip-workspace');
@@ -330,7 +332,11 @@
       notes = (await supa.from('notes').select('*').eq('meeting_id', mId)).data || [];
     }
     tbody.innerHTML = '';
-    (teams || []).forEach(renderTeamRow);
+    if (!(teams || []).length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="muted-note" style="text-align:center;padding:22px;">No teams yet — add one with “Add team” above.</td></tr>';
+    } else {
+      (teams || []).forEach(renderTeamRow);
+    }
     refreshReadiness();
     renderLifecycle(m);
   }
@@ -415,6 +421,13 @@
   // ---- Record the meeting (browser mic → Supabase storage; generated later on the Minutes page) ----
   const REC_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg>';
   const STOP_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>';
+  function fmtRecTime(s){ return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  function startRecTimer(){                       // pulsing dot + mm:ss so recording never looks static
+    const t0 = Date.now();
+    recTimer.innerHTML = '<span class="rec-dot"></span> 0:00';
+    recTick = setInterval(function(){ recTimer.innerHTML = '<span class="rec-dot"></span> ' + fmtRecTime(Math.floor((Date.now() - t0) / 1000)); }, 1000);
+  }
+  function stopRecTimer(){ if (recTick) { clearInterval(recTick); recTick = null; } recTimer.textContent = ''; }
   if (!window.MediaRecorder && recBtn) {
     recBtn.disabled = true;
     recStatus.textContent = 'Recording not supported here — use the command line below.';
@@ -440,6 +453,7 @@
       recMediaRec = new MediaRecorder(recStream);
       recMediaRec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
       recMediaRec.onstop = async function(){
+        stopRecTimer();
         const blob = new Blob(chunks, { type: recMediaRec.mimeType });
         recStream.getTracks().forEach(t => t.stop());
         recBtn.innerHTML = REC_ICON + ' Record';
@@ -461,7 +475,7 @@
         } catch (e) { recStatus.textContent = ''; console.error(e); toast('Couldn’t save the recording — please try again.', 'error'); }
       };
       recMediaRec.start(); recSaved.style.display = 'none';
-      recBtn.innerHTML = STOP_ICON + ' Stop'; recStatus.textContent = 'recording…';
+      recBtn.innerHTML = STOP_ICON + ' Stop'; recStatus.textContent = 'Recording…'; startRecTimer();
     } catch (e) { recStatus.textContent = 'Could not start recording.'; }
   });
 

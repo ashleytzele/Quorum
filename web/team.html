@@ -185,6 +185,8 @@
 
   const titleEl = document.getElementById('meeting-title');
   const tabsEl = document.getElementById('meeting-tabs');
+  // Hide the (otherwise inert) submission + notes editor cards when there's no meeting to edit.
+  function hideEditorCards(){ document.querySelectorAll('#main .card').forEach(function(c){ c.style.display = 'none'; }); }
 
   if (onBehalf) {
     // Admin editing on behalf of a team: pin to one meeting+team, show a banner, no tab switcher.
@@ -195,11 +197,11 @@
     // Embedded VIP workspace: no banner (the admin dashboard already frames it).
     tabsEl.innerHTML = embed ? '' : ('<div class="pf-banner">Editing as <b>' + esc(tname) +
       '</b> · admin — changes save to this team. <a href="admin.html">Back to admin</a></div>');
-    if (!meeting) return;
+    if (!meeting) { hideEditorCards(); return; }
   } else {
     if (!meetings.length) {
       tabsEl.innerHTML = '<div class="muted-note">No meetings yet — your admin hasn\'t opened one.</div>';
-      titleEl.textContent = 'No active meeting'; return;
+      titleEl.textContent = 'No active meeting'; hideEditorCards(); return;
     }
     // This team's submission status for every open meeting → fills each tab's dot.
     const { data: statusRows } = await supa.from('notes').select('meeting_id, submitted')
@@ -238,7 +240,8 @@
   function saver(el){
     return {
       saving: function(){ el.className = 'status saving'; el.innerHTML = '<span class="dot"></span>Saving…'; },
-      saved:  function(){ el.className = 'status ok'; el.innerHTML = '<span class="dot"></span>Saved'; }
+      saved:  function(){ el.className = 'status ok'; el.innerHTML = '<span class="dot"></span>Saved'; },
+      error:  function(){ el.className = 'status err'; el.innerHTML = '<span class="dot"></span>Not saved'; }
     };
   }
 
@@ -248,9 +251,10 @@
   const initial = noteRow || { pre_note: '', content: '', submitted: false, notes_submitted: false };
 
   async function saveNote(fields){
-    await supa.from('notes').upsert(
+    const { error } = await supa.from('notes').upsert(
       Object.assign({ meeting_id: meeting.id, team_id: effectiveTeamId, updated_at: new Date().toISOString() }, fields),
       { onConflict: 'meeting_id,team_id' });
+    return error;   // caller shows "Not saved" instead of a false "Saved"
   }
 
   /* ---------- Editors (autosave to Supabase) ---------- */
@@ -262,10 +266,10 @@
     ta.addEventListener('input', function(){
       render(); st.saving();
       clearTimeout(timer);
-      timer = setTimeout(async function(){ await saveFn(ta.value); st.saved(); }, 700);
+      timer = setTimeout(async function(){ var err = await saveFn(ta.value); if (err) st.error(); else st.saved(); }, 700);
     });
     // Flush any pending debounced save immediately (on blur, and before a meeting switch).
-    function flush(){ if (!timer) return Promise.resolve(); clearTimeout(timer); timer = null; return saveFn(ta.value).then(function(){ st.saved(); }); }
+    function flush(){ if (!timer) return Promise.resolve(); clearTimeout(timer); timer = null; return saveFn(ta.value).then(function(err){ if (err) st.error(); else st.saved(); }); }
     pendingSaves.push(flush);
     // catch OS dictation (Spokenly etc.) that may not fire 'input'
     ta.addEventListener('blur', function(){ render(); flush(); });
@@ -403,7 +407,7 @@
     if (sub) sub.textContent = (meeting.title ? meeting.title + ' · ' : '') + (toggle.checked ? 'Submitted' : 'Draft');
   }
   toggle.checked = !!initial.submitted;
-  toggle.addEventListener('change', async function(){ reflect(); await saveNote({ submitted: toggle.checked }); });
+  toggle.addEventListener('change', async function(){ reflect(); if (await saveNote({ submitted: toggle.checked })) toast('Couldn’t update submission — please try again.', 'error'); });
   reflect();
 
   /* ---------- Meeting-notes submit toggle (wired to notes.notes_submitted) ---------- */
@@ -414,7 +418,7 @@
     else { nStatus.textContent = 'Draft'; nStatus.className = 'pill pill-muted'; }
   }
   nToggle.checked = !!initial.notes_submitted;
-  nToggle.addEventListener('change', async function(){ reflectNotes(); await saveNote({ notes_submitted: nToggle.checked }); });
+  nToggle.addEventListener('change', async function(){ reflectNotes(); if (await saveNote({ notes_submitted: nToggle.checked })) toast('Couldn’t update submission — please try again.', 'error'); });
   reflectNotes();
 
   /* ---------- Embedded workspace: report height so the admin dashboard can size the iframe ---------- */
