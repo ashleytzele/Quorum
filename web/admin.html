@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 <div class="page">
   <header class="topbar">
     <div class="container topbar-inner">
@@ -26,13 +27,15 @@
         <span class="meeting">Administrator</span>
       </div>
       <span class="spacer"></span>
-      <a class="toplink" href="history.html">History</a>
-      <a class="toplink" href="team.html">Member view</a>
-      <a class="toplink" href="#" id="admin-signout">Sign out</a>
+      <nav class="topnav" aria-label="Primary">
+        <a class="toplink" href="history.html">History</a>
+        <a class="toplink" href="team.html">Member view</a>
+        <a class="toplink" href="#" id="admin-signout">Sign out</a>
+      </nav>
     </div>
   </header>
 
-  <main class="main">
+  <main class="main" id="main">
     <div class="container">
       <div class="grid-head">
         <div>
@@ -44,7 +47,7 @@
       <!-- Meeting details -->
       <section class="card" style="margin-bottom:22px;">
         <div class="card-head">
-          <span class="card-title">
+          <span class="card-title" role="heading" aria-level="2">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>
             Meeting details
           </span>
@@ -97,7 +100,7 @@
       <!-- Admin-run (VIP) workspace — embeds the editor; shown only for model='admin' meetings -->
       <section class="card" id="vip-workspace" style="display:none;margin-bottom:22px;">
         <div class="card-head">
-          <span class="card-title">
+          <span class="card-title" role="heading" aria-level="2">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
             Meeting content · VIP
           </span>
@@ -109,7 +112,7 @@
       <!-- Teams table -->
       <section class="card" id="teams-card">
         <div class="card-head">
-          <span class="card-title">
+          <span class="card-title" role="heading" aria-level="2">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19a4 4 0 0 0-8 0"/><circle cx="12" cy="9" r="3"/><path d="M5 19a3.5 3.5 0 0 1 4-3.2M19 19a3.5 3.5 0 0 0-4-3.2"/></svg>
             Teams
           </span>
@@ -217,7 +220,8 @@
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 6"/></svg>';
-  const PALETTE = ['#3b4dd8','#0f8a5f','#b5850b','#8a4fd0','#c2410c','#0891b2'];
+  // Avatar fills — darkened so white initials clear WCAG AA (≥4.5:1) on every hue.
+  const PALETTE = ['#3b4dd8','#0c7350','#84610a','#8a4fd0','#c2410c','#0e7490'];
   function initials(name){ return name.trim().split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase(); }
   function fileIcon(name){
     var img = /\.(png|jpe?g|gif|webp|svg|heic|bmp|fig)$/i.test(name);

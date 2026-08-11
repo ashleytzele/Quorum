@@ -31,7 +31,9 @@
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --accent:oklch(56% 0.20 267); --accent-600:oklch(63% 0.185 267); --accent-700:oklch(80% 0.13 267);
+  /* accent-600 is the primary-button hover FILL (white text). Kept darker than resting --accent
+     so white stays ≥4.5:1 (WCAG 1.4.3) — a lighter hover here dropped it to 3.62:1. */
+  --accent:oklch(56% 0.20 267); --accent-600:oklch(50% 0.185 267); --accent-700:oklch(80% 0.13 267);
   --accent-50:oklch(31% 0.055 267); --accent-100:oklch(41% 0.10 267);
   --bg:oklch(17% 0.008 74); --surface:oklch(21% 0.009 74); --surface-2:oklch(24.5% 0.010 74);
   --muted-bg:oklch(27% 0.011 74); --topbar-bg:oklch(17% 0.008 74 / .82);
@@ -82,6 +84,25 @@ img{max-width:100%;display:block;}
   display:grid;place-items:center;font-weight:700;font-size:0.75rem;}
 .toplink{display:inline-flex;align-items:center;font-size:0.8438rem;font-weight:600;color:var(--text-2);padding:7px 12px;border-radius:8px;}
 .toplink:hover{background:var(--surface);color:var(--text);text-decoration:none;}
+/* Narrow screens: let the bar wrap instead of horizontally scrolling the page, and drop the
+   secondary meeting context (it also shows in the page body). Keeps admin/team bars in-bounds at 375px. */
+@media (max-width:600px){
+  .topbar-inner{height:auto;min-height:56px;flex-wrap:wrap;gap:10px 8px;padding:8px 0;}
+  .context{display:none;}
+  .toplink{padding:7px 9px;}
+}
+
+/* Landmark nav without changing the flex layout: display:contents makes .topnav generate no box,
+   so its links stay direct flex children of .topbar-inner while exposing a "Primary" nav landmark. */
+.topnav{display:contents;}
+/* Skip link (WCAG 2.4.1): off-screen until focused, then pinned top-left. */
+.skip-link{position:absolute;left:8px;top:-48px;z-index:80;background:var(--surface);color:var(--text);
+  border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 14px;font-weight:600;font-size:0.875rem;
+  box-shadow:var(--shadow);transition:top .15s;}
+.skip-link:focus{top:8px;outline:none;text-decoration:none;box-shadow:0 0 0 4px var(--accent-100);}
+/* Handoff command block: a scrollable mono strip (the command can be long). */
+.handoff-cmd{margin:10px 0 12px;padding:12px 14px;background:var(--muted-bg);border:1px solid var(--border);
+  border-radius:10px;overflow-x:auto;font-family:var(--mono);font-size:0.8125rem;color:var(--text);white-space:pre;}
 
 /* ---- Buttons ---- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;
@@ -298,7 +319,7 @@ body.present-body{background:var(--bg);overflow:hidden;}
 .reveal .nav button svg{width:19px;height:19px;}
 .reveal .back{position:absolute;top:22px;right:30px;width:38px;height:38px;border-radius:50%;border:1px solid var(--st-line);
   background:var(--st-navbg);color:var(--st-faint);display:none;place-items:center;z-index:5;transition:.15s;}
-.reveal:hover .back{display:grid;}
+.reveal:hover .back,.reveal:focus-within .back{display:grid;}
 .reveal .back:hover{color:var(--st-ink);background:var(--st-navhover);text-decoration:none;}
 .reveal .back svg{width:17px;height:17px;}
 
@@ -329,7 +350,7 @@ body.present-body{background:var(--bg);overflow:hidden;}
 .ai-status.is-ok{color:var(--ok);font-weight:600;}
 .ai-status.is-err{color:var(--danger);font-weight:600;}
 .ai-minutes{width:100%;margin-top:10px;min-height:340px;
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.82rem;line-height:1.55;}
+  font-family:var(--mono);font-size:0.82rem;line-height:1.55;}
 .ai-source{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:0.82rem;color:var(--text-2);}
 .ai-source label{display:flex;align-items:center;gap:6px;cursor:pointer;}
 .ai-src-panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;}
@@ -341,12 +362,13 @@ body.present-body{background:var(--bg);overflow:hidden;}
    so they read and print the same whether the app is in light or dark mode. */
 .doc{background:oklch(99.2% 0.004 80);width:100%;max-width:760px;border:1px solid oklch(89% 0.006 80);border-radius:12px;
   box-shadow:var(--shadow);padding:62px 66px;font-family:var(--serif);color:#1c2230;line-height:1.62;}
+@media (max-width:560px){ .doc-wrap{padding:20px 12px 60px;} .doc{padding:34px 24px;} }
 .doc .doc-org{font-family:var(--font);font-size:0.8125rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:oklch(41% 0.165 267);}
 .doc .doc-title{font-size:2.0625rem;font-weight:700;letter-spacing:-.01em;margin:8px 0 6px;line-height:1.12;}
 .doc .doc-meta{color:#5c6473;font-size:0.9375rem;font-family:var(--font);}
 .doc .doc-meta b{color:#1c2230;font-weight:600;}
 .doc hr.rule{border:none;border-top:2px solid #1c2230;margin:20px 0 6px;}
-.doc h3.sec{font-family:var(--font);font-size:0.7813rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:oklch(41% 0.165 267);margin:30px 0 11px;}
+.doc h2.sec{font-family:var(--font);font-size:0.7813rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:oklch(41% 0.165 267);margin:30px 0 11px;}
 .doc p{margin:11px 0;font-size:1.0313rem;}
 .doc ul,.doc ol{margin:11px 0;padding-left:24px;font-size:1.0313rem;}
 .doc li{margin:6px 0;}
@@ -481,9 +503,9 @@ body.present-body{background:var(--bg);overflow:hidden;}
 
 /* Touch devices: guarantee comfortable 44px hit targets without inflating desktop density (WCAG 2.5.5). */
 @media (pointer:coarse){
-  .btn,.view-btn,.toplink,.file-remove,.segmented button,.detail-file{min-height:44px;}
-  .icon-btn,.theme-toggle{min-width:44px;min-height:44px;}
-  .hdel{width:40px;height:40px;}
+  .btn,.view-btn,.toplink,.file-remove,.segmented button,.detail-file,.switch,.roster-remove{min-height:44px;}
+  .icon-btn,.theme-toggle,.hdel{width:44px;height:44px;min-width:44px;min-height:44px;}
+  .input,.textarea,select,.file-caption,#history-search{min-height:44px;}
 }
 
 /* ---- Print ---- */

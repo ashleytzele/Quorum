@@ -25,7 +25,7 @@
     var d = el('dialog', { class: 'app-dialog' + (opts.danger ? ' danger' : ''), 'aria-labelledby': 'ad-title' });
     var form = el('form', { method: 'dialog' });
     var h = el('h2', { class: 'ad-title', id: 'ad-title' }); h.textContent = opts.title || ''; form.appendChild(h);
-    if (opts.body) { var p = el('p', { class: 'ad-body' }); p.textContent = opts.body; form.appendChild(p); }
+    if (opts.body) { var p = el('p', { class: 'ad-body', id: 'ad-body' }); p.textContent = opts.body; form.appendChild(p); d.setAttribute('aria-describedby', 'ad-body'); }
     var input = null, inputs = null;
     if (opts.fields) {
       // Multi-field prompt: resolves an object keyed by each field's `name`.

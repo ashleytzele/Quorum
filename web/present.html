@@ -96,7 +96,8 @@
     : await selectedMeeting();
   const isVip = !!(meeting && meeting.model === 'admin');  // admin-run: no team framing
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-  const PALETTE = ['#3b4dd8','#0f8a5f','#b5850b','#8a4fd0','#c2410c','#0891b2'];
+  // Avatar fills — darkened so white initials clear WCAG AA (≥4.5:1) on every hue.
+  const PALETTE = ['#3b4dd8','#0c7350','#84610a','#8a4fd0','#c2410c','#0e7490'];
   const initials = (n) => n.trim().split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase();
   const badge = (name, color) =>
     '<span style="display:inline-grid;place-items:center;width:2.6vmin;height:2.6vmin;border-radius:.6vmin;background:' +
@@ -132,7 +133,7 @@
     if (!groups.length){
       pf.innerHTML = '<div class="pf-card"><div class="pf-title">Nothing to present yet</div>' +
         '<div class="pf-sub">No team has submitted notes or files for this meeting.</div>' +
-        '<div class="pf-actions"><span></span><button class="pf-start" id="pf-start" type="button">Open empty deck ▶</button></div></div>';
+        '<div class="pf-actions"><span></span><button class="pf-start" id="pf-start" type="button">Open empty deck <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-1px;margin-left:2px"><path d="M8 5v14l11-7z"/></svg></button></div></div>';
       document.getElementById('pf-start').addEventListener('click', start);
       return;
     }
@@ -144,7 +145,7 @@
       g.files.forEach(function(f, fi){ html += pfItem(gi + '-f' + fi, esc(f.file_name) + (f.url ? ' <span style="color:var(--text-3);">· link</span>' : '')); });
     });
     html += '<div class="pf-actions"><button class="pf-select-all" id="pf-toggle-all" type="button">Deselect all</button>' +
-      '<button class="pf-start" id="pf-start" type="button">Start presentation ▶</button></div></div>';
+      '<button class="pf-start" id="pf-start" type="button">Start presentation <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-1px;margin-left:2px"><path d="M8 5v14l11-7z"/></svg></button></div></div>';
     pf.innerHTML = html;
     document.getElementById('pf-start').addEventListener('click', start);
     const toggleAll = document.getElementById('pf-toggle-all');
@@ -193,7 +194,7 @@
           // One bad file must never kill the whole deck — fall back to a link, keep presenting.
           try {
             url = await signedUrl(f.file_path);
-            if (kind === 'image') parts.push(slide(head + '<div class="capslide"><img class="present-media" src="' + url + '" alt="' + esc(f.file_name) + '">' + capNote + '</div>'));
+            if (kind === 'image') parts.push(slide(head + '<div class="capslide"><img class="present-media" loading="lazy" src="' + url + '" alt="' + esc(f.file_name) + '">' + capNote + '</div>'));
             else if (kind === 'pdf') parts.push(slide(head + capHead + '<embed class="present-pdf" src="' + url + '" type="application/pdf">'));
             else if (kind === 'markdown'){
               const dl = await supa.storage.from('submissions').download(f.file_path);

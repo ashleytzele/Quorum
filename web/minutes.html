@@ -28,7 +28,7 @@
       <div class="min-actions">
         <button class="btn btn-ghost" id="generate" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 8-8 8 8 0 0 1 5.7 2.4L20 8"/><path d="M20 4v4h-4"/><path d="M20 12a8 8 0 0 1-8 8 8 8 0 0 1-5.7-2.4L4 16"/><path d="M4 20v-4h4"/></svg>
-          Generate
+          Refresh preview
         </button>
         <button class="btn btn-ghost" id="print" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="13" width="12" height="8"/><path d="M6 17H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/></svg>
@@ -59,7 +59,7 @@
       </div>
       <div id="ai-wrap" class="ai-card" style="display:none;">
         <div class="ai-card-head">
-          <div class="ai-card-title">
+          <div class="ai-card-title" role="heading" aria-level="2">
             <svg class="ai-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.6 15l.85 2.55L22 18.4l-2.55.85L18.6 21.8l-.85-2.55L15.2 18.4l2.55-.85z"/></svg>
             <span>Generate from Meetily</span>
             <span class="pill">AI</span>
@@ -71,7 +71,7 @@
             </button>
           </div>
         </div>
-        <div class="ai-source">
+        <div class="ai-source" role="radiogroup" aria-label="Audio source">
           <label><input type="radio" name="ai-source" value="meetily" checked> Meetily recording</label>
           <label><input type="radio" name="ai-source" value="record"> Record</label>
           <label><input type="radio" name="ai-source" value="import"> Import</label>
@@ -81,17 +81,17 @@
         </div>
         <div class="ai-src-panel" data-src="record" style="display:none;">
           <label class="ai-rec">Mic <select class="input" id="ai-device"></select></label>
-          <button class="btn btn-ghost" id="ai-rec-btn" type="button">● Record</button>
+          <button class="btn btn-ghost" id="ai-rec-btn" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg> Record</button>
           <span id="ai-rec-time" class="page-sub"></span>
           <span class="page-sub" style="flex-basis:100%;">Records the selected mic only — for online calls, use Import (or route system audio to a virtual input).</span>
         </div>
         <div class="ai-src-panel" data-src="import" style="display:none;">
-          <input type="file" id="ai-file" accept="audio/*">
+          <input type="file" id="ai-file" accept="audio/*" aria-label="Import audio file">
         </div>
         <label id="ai-fast-wrap" style="display:none;align-items:center;gap:6px;margin-top:8px;font-size:0.8rem;color:var(--text-2);cursor:pointer;">
           <input type="checkbox" id="ai-fast"> Fast draft — ~5× faster, less accurate (good for a quick pass you'll edit)
         </label>
-        <div class="ai-status" id="ai-status"></div>
+        <div class="ai-status" id="ai-status" role="status" aria-live="polite"></div>
         <textarea class="textarea ai-minutes" id="ai-minutes" rows="16" placeholder="Generated minutes appear here — review and edit before finalizing." style="display:none;"></textarea>
       </div>
     </div>
@@ -176,6 +176,9 @@
     } catch (e) { aiStatus.className = 'ai-status is-err'; aiStatus.textContent = 'Mic access denied — use Import instead.'; }
   }
 
+  // Record/stop icons (inline SVG) so the transport button matches the SVG icon vocabulary, not ●/■ glyphs.
+  var REC_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg>';
+  var STOP_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>';
   document.getElementById('ai-rec-btn').addEventListener('click', async function () {
     const btn = this;
     if (mediaRec && mediaRec.state === 'recording') { mediaRec.stop(); return; }
@@ -188,10 +191,10 @@
       mediaRec.onstop = function () {
         recordedBlob = new Blob(chunks, { type: mediaRec.mimeType });
         recStream.getTracks().forEach(t => t.stop());
-        btn.textContent = '● Record'; document.getElementById('ai-rec-time').textContent = 'recorded ✓';
+        btn.innerHTML = REC_ICON + ' Record'; document.getElementById('ai-rec-time').textContent = 'recorded ✓';
       };
       mediaRec.start(); recordedBlob = null;
-      btn.textContent = '■ Stop'; document.getElementById('ai-rec-time').textContent = 'recording…';
+      btn.innerHTML = STOP_ICON + ' Stop'; document.getElementById('ai-rec-time').textContent = 'recording…';
     } catch (e) { aiStatus.className = 'ai-status is-err'; aiStatus.textContent = 'Could not start recording.'; }
   });
 
@@ -282,14 +285,14 @@
       const c = noteFor(vipTeamId).trim();
       html = c ? md.render(c) : '<p style="color:#5c6473;">No content yet.</p>';
     } else {
-      html = '<h3 class="sec">Team updates</h3>';
+      html = '<h2 class="sec">Team updates</h2>';
       (teams || []).forEach(function(t){
         const c = noteFor(t.id).trim();
-        html += '<h4 style="font-family:var(--font);margin:14px 0 4px;">' + esc(t.name) + '</h4>';
+        html += '<h3 style="font-family:var(--font);font-size:0.9375rem;margin:14px 0 4px;">' + esc(t.name) + '</h3>';
         html += c ? md.render(c) : '<p style="color:#5c6473;">No updates this week.</p>';
       });
     }
-    html += '<h3 class="sec">Decisions</h3>';
+    html += '<h2 class="sec">Decisions</h2>';
     const lines = decisionLines();
     html += lines.length
       ? '<ul>' + lines.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul>'
