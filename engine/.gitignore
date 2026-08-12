@@ -1,0 +1,20 @@
+# Large binaries — never commit
+*.m4a
+*.wav
+*.bin
+
+# local GUI meeting storage
+meetings/
+.venv/
+
+# Secrets
+.env
+
+# macOS
+.DS_Store
+
+# python
+__pycache__/
+.pytest_cache/
+*.pyc
+samples/

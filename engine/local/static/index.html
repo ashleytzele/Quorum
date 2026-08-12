@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meeting Minutes — Local</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head><body>
+<div class="wrap" style="display:grid;grid-template-columns:280px 1fr;gap:20px;padding:20px;max-width:1100px;margin:0 auto;">
+  <aside class="card">
+    <button class="btn btn-primary" id="new-meeting-btn">New meeting</button>
+    <ul id="meeting-list" style="list-style:none;padding:0;margin-top:14px;"></ul>
+  </aside>
+  <main id="detail" class="card"><p class="page-sub">Select or create a meeting.</p></main>
+</div>
+<template id="detail-tpl">
+  <h1 class="page-title"><input class="input" id="m-title" placeholder="Meeting title"></h1>
+  <label class="label">Template</label><select class="input" id="m-template"></select>
+  <div class="label" style="margin-top:16px;">Pre-meeting notes</div>
+  <div id="notes-list"></div>
+  <button class="btn btn-ghost" id="add-note-btn">+ Add project note</button>
+  <div class="label" style="margin-top:16px;">Recording</div>
+  <button class="btn" id="record-btn">● Record</button> <span id="record-status" class="pill pill-muted"></span>
+  <div style="margin-top:16px;"><button class="btn btn-primary" id="generate-btn">Generate minutes</button>
+    <span id="gen-status" class="page-sub"></span></div>
+  <div class="label" style="margin-top:16px;">Minutes</div>
+  <textarea class="textarea" id="minutes-edit" rows="18" style="width:100%;"></textarea>
+  <button class="btn" id="minutes-save-btn">Save minutes</button>
+</template>
+<script src="/static/app.js"></script>
+</body></html>

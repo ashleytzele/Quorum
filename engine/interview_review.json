@@ -1,0 +1,33 @@
+{
+  "name": "Interview Record",
+  "registry": true,
+  "description": "A neutral, structured record of a single Campus Recreation Aquatics candidate interview — built for archiving and later comparison, NOT for making a hiring decision. Serves BOTH roles (Aquatics Student Leader and Lifeguard) and any question set: the interview questions change between candidates and roles, so capture whatever was actually asked. The intake skeleton is stable (name/major/graduation/pronouns, the ≥6-units + ≥2.0-GPA eligibility check, and availability), so those are captured as dedicated sections. STRICTLY NEUTRAL: summarize what was said, never judge, score, rank, or recommend. No 'strong answer', no 'seemed nervous', no fit rating — just the record. Ignore the interviewer's opening position overview (pay rate, hours, program description); record only the candidate's responses and stated facts.",
+  "sections": [
+    {
+      "title": "Interview",
+      "instruction": "One short block of meta, capturing only what is actually stated in the recording. Include: the role interviewed for (Aquatics Student Leader or Lifeguard), the candidate's name, their pronouns, major, and expected graduation date, the interviewer(s), and the interview date. Use the candidate's stated pronouns throughout the record; if pronouns were not stated, use they/them. Never invent or guess a name, role, date, major, or pronoun — omit anything not said.",
+      "format": "string"
+    },
+    {
+      "title": "Eligibility & Availability",
+      "instruction": "A neutral bulleted list of the stable factual items these interviews always check, recorded only if the candidate addressed them: (a) the eligibility confirmation — whether the candidate confirmed they are enrolled in at least 6 units and have a minimum 2.0 GPA; (b) certifications and relevant training (e.g. current Lifeguard certification, CPR/First Aid, water-rescue or swim experience); (c) availability — weekly availability during the semester, availability over Winter and Summer breaks, and for Student Leader candidates the start-of-semester management retreat; break availability down by day if the candidate did. Record facts only — do NOT assess whether the candidate is qualified or available enough. One concrete point per bullet. OMIT the whole section if none of this was discussed; never write 'None' or 'N/A'.",
+      "format": "list"
+    },
+    {
+      "title": "Questions & Answers",
+      "instruction": "The core of the record. Produce one row for EVERY distinct question the interviewer asked, in the order asked, using a markdown table '| Question | Candidate's answer |'. This includes behavioral questions, role-specific questions, SCENARIO/situational questions (e.g. a spinal-injury or rough-housing scenario for Lifeguards), and Student-Leader presentation-round questions — all captured the same way. Paraphrase the question clearly in the first cell. In the second cell, faithfully summarize what the candidate actually said — their real points, examples, and reasoning — in a neutral voice. Do NOT judge the answer, do NOT add 'good/weak/vague', do NOT compare it to what the interviewer was 'looking for', do NOT infer intent beyond what was said. If the candidate did not really answer a question, write exactly 'Did not answer' in the answer cell.",
+      "format": "list",
+      "item_format": "| **Question** | **Candidate's answer** |\n| --- | --- |"
+    },
+    {
+      "title": "Notable Points",
+      "instruction": "A neutral bulleted list of anything relevant the candidate raised that was NOT a direct answer to a question: something they volunteered, a concern or constraint they mentioned, or questions THEY asked the interviewer. Record it plainly, no judgment. One point per bullet. OMIT the section entirely if there was nothing — do not write 'None'.",
+      "format": "list"
+    },
+    {
+      "title": "Follow-ups",
+      "instruction": "A neutral bulleted list of concrete open items to check or revisit: a certification, document, or GPA/enrollment to verify, availability to confirm, a physical skills Test-Out still pending (e.g. 150-yard swim, 2-minute tread, 50-yard swim, 10-pound brick test), or anything explicitly left for a next step. Factual only — not a to-do about whether to hire them. OMIT the section if there are none.",
+      "format": "list"
+    }
+  ]
+}

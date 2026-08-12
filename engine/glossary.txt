@@ -1,0 +1,20 @@
+# Whisper initial prompt. Lines starting with # are ignored.
+# This is the highest-leverage file here: it fixed "Android 5.15" -> "M5SK".
+# Keep it under ~900 chars — whisper truncates the prompt at ~224 tokens,
+# silently. Add real proper nouns, drop ones that stop appearing.
+# 24 Jul: added MSAR, WCE, TMCS, Ant Media Server, Zeek, nightpos, AMS, SOF
+# after the audio mangled them (MSR, W3, NMedia, ZIG, "night post").
+# 31 Jul: added OpenNMS, MQTT, Odoo, Kak Ros, MPR, pcap, ja3/ja4
+# after the audio gave OpenMS, KMCS/TNCS, "Kak Rose".
+
+Malaysian office meeting recorded in Penang. Speakers use Manglish:
+lah, lor, meh, kena, boleh, tapau, makan, alamak, already, can can, aiya.
+Some Malay words appear: kerajaan, surat, syarikat, projek. Names: Kak Ros,
+Wana, Amy, Justin, Kelly, Alex, Ivan, Leong.
+
+Projects: MSAR, Metier Food, Safety Hero, H2NK, WCE, TMCS, DataAnalyzerProMax,
+Asset Management System (AMS), HIS map directory, TRIS, EPOS nightpos printer.
+
+Products and tech: Odoo, OpenNMS, MQTT, TMCS, IoT, Ant Media Server, GoToRTC,
+Zeek, zeek-core, pcap, ja3, ja4, SOF (Sales Order Form), MPR, M5SK, node,
+master, IPv6, MCP, asset code, dashboard, staging.
