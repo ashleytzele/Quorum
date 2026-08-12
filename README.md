@@ -51,9 +51,8 @@ The visual system is documented in **[DESIGN.md](DESIGN.md)** and the product in
 ## Running locally
 
 1. **Configure** `web/config.js` with your Supabase URL + anon key and the bridge URL (`http://localhost:8899`).
-2. **Serve the web app** on `http://localhost:8000` (`./run.command`, or any static server over `web/`).
-3. **For AI generation**, start the engine's bridge from the meetily repo (`./run-bridge.command`) — it shells `review.py`. Without it, everything except AI generation works.
-4. Sign in at `http://localhost:8000/` (or `dev-login.html` for a quick local admin session).
+2. **Start it** — double-click `engine/run-quorum.command`. It serves `web/` on `http://localhost:8000`, starts the AI bridge on `http://localhost:8899` (it shells `review.py`), and opens the admin console. Without the bridge, everything except AI generation works.
+3. Sign in at `http://localhost:8000/` (or `dev-login.html` for a quick local admin session).
 
 Supabase provides auth, the `meetings` / `teams` / `notes` / `submissions` tables, and a `submissions` storage bucket (recordings live under a `recordings/<meeting_id>/` prefix).
 

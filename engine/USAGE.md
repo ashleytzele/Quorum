@@ -18,10 +18,10 @@ the **command line** (no Quorum). Both use the same engine.
 3. The Meetily desktop app (`/Applications/meetily.app`) is installed and records fine (it uses
    CoreAudio — no Audio MIDI setup needed).
 
-### Each session — start the two helpers (double-click; leave the windows open)
-1. **`run-bridge.command`** (repo root) → the local bridge on `http://localhost:8899`.
-   First run builds `.venv` and installs deps; after that it's instant.
-2. **`run.command`** in the Quorum repo → the app on `http://localhost:8000`.
+### Each session — start it (double-click; leave the window open)
+**`engine/run-quorum.command`** → the app on `http://localhost:8000` and the bridge on
+`http://localhost:8899`, then opens the admin console. First run builds `.venv` and installs
+deps; after that it's instant.
 
 ### Running a meeting
 1. **Before** — in Quorum, create the meeting; your team members submit their pre-meeting
